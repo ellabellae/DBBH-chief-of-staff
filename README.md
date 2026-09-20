@@ -2,13 +2,13 @@
 
 **Live demo (fictional data, no install):** https://ellabellae.github.io/DBBH-chief-of-staff/
 
-Built for the president of a student organization to keep track of VP meetings, member data, and event performance, and to extract insights from all three. I'm co-president of [Duke Business Behind Health](https://www.dukebusinessbehindhealth.org), a 300-member club, and I built this so I can answer any question about our members in under a minute.
+Built for the president of a student organization to keep track of VP meetings, member data, and event performance, and to extract insights from all three. I'm co-president of [Duke Business Behind Health](https://www.dukebusinessbehindhealth.org), a 300-member club, and I built this so I can answer any question about our members in under a minute and create personalized experiences for them.
 
-It reads our live attendance spreadsheet, Google Calendar, and meeting notes, then answers the questions I used to dig for: how many people RSVP'd versus showed up, what members want from the club, which class years and majors are thin, and what each VP owes me before our next 1:1. It also flags data problems on its own and drafts my meeting agendas from the current numbers.
+It reads our live attendance spreadsheet, Google Calendar, and meeting notes (I use Wispr Flow's notetacker), then answers the questions I used to dig for: how many people RSVP'd versus showed up, what members want from the club, which class years and majors are thin, and what each VP owes me before our next 1:1. It also flags data problems on its own and drafts my meeting agendas from the current numbers.
 
 ## Why I built it
 
-Every week I meet one-on-one with our vice presidents, and every meeting came back to the same questions:
+We are keeping tack of 4 different programs and 300+ members- we want each experience to feel personalized for our members and rooted in connection and community, but still need to stay structured and driven by data, such as how many members are actually showing up to events and what are they interested in. Every week I would meet with VPs and in team meetings and the same questions came up: 
 
 - How many people RSVP'd to the last event, and how many showed up?
 - What are our members looking for from us, and are we programming for it?
@@ -17,7 +17,7 @@ Every week I meet one-on-one with our vice presidents, and every meeting came ba
 
 The answers existed, but they were spread across an attendance spreadsheet with a dozen tabs, a Google Calendar, and meeting notes. Pulling them together took long enough that we mostly argued from memory. Now I open one page before the meeting and we look at the gaps together.
 
-The clearest example is RSVPs against turnout. Our first info session had 29 RSVPs and 96 check-ins. The second had 58 and 131. Once that ratio sat in front of us, we stopped ordering food by RSVP count.
+Now, we are able to run our Sunday exec meetings 10x more efficiently, staying rooted in the data for each event to quantify "success" and learn from our member's interests. Each meeting, we recap how many members RSVPd vs attended, how much we have grown in membership, if interests of members have shifted, etc.
 
 ## What it does
 
@@ -30,7 +30,7 @@ The clearest example is RSVPs against turnout. Our first info session had 29 RSV
 | **Actions** | A follow-up list with owners, due dates, and priorities. Some are suggested by the data; the rest I add. |
 | **Ask** | Plain-English questions about the club, answered from everything on the page. |
 
-The **signals** on the Brief are the part I rely on most. They are rules run against the live data, and they have caught real problems: exec members who never registered on the portal, sign-ups with no row in the points tracker, an attendance column that credited 74 people when 96 had checked in, and a spreadsheet header someone had overwritten, which silently broke interest data for the whole site.
+The **signals** on the Brief are the part I rely on most. They are rules run against the live data, and they have caught real problems: sign-ups with no row in the points tracker, an attendance column that credited 74 people when 96 had checked in, and a spreadsheet header someone had overwritten, which silently broke interest data for the whole site. The **Ask** is especially helpful in meetings where we want quick, member-specific data fast, such as "how many upperclassmen do we have", "what % of members are BME", "what was my idea about re-structuring GBMs from my last meeting?". I personally use Wispr Flow's notetaker for all meetings, then set it up as a connector so all meeting information is automatically imported and utilized. For example, if I say to one of my VPs "I will send you that article I read about XYZ", it will create an action "Send article XYZ to VP ___". 
 
 ## How it works
 

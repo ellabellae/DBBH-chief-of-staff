@@ -1,8 +1,10 @@
 # dBBH Chief of Staff
 
-**Live demo (fictional data, no install):** https://ellabellae.github.io/dbbh-chief-of-staff/
+**Live demo (fictional data, no install):** https://ellabellae.github.io/DBBH-chief-of-staff/
 
-A president's dashboard for [Duke Business Behind Health](https://www.dukebusinessbehindhealth.org), a 300-member student organization. I'm co-president. I built this so I can answer any question about our members in under a minute.
+Built for the president of a student organization to keep track of VP meetings, member data, and event performance, and to extract insights from all three. I'm co-president of [Duke Business Behind Health](https://www.dukebusinessbehindhealth.org), a 300-member club, and I built this so I can answer any question about our members in under a minute.
+
+It reads our live attendance spreadsheet, Google Calendar, and meeting notes, then answers the questions I used to dig for: how many people RSVP'd versus showed up, what members want from the club, which class years and majors are thin, and what each VP owes me before our next 1:1. It also flags data problems on its own and drafts my meeting agendas from the current numbers.
 
 ## Why I built it
 
@@ -75,8 +77,8 @@ I built it in [Claude Code](https://claude.com/claude-code) using the gstack ski
 ## Run it locally
 
 ```bash
-git clone https://github.com/ellabellae/dbbh-chief-of-staff.git
-open dbbh-chief-of-staff/index.html
+git clone https://github.com/ellabellae/DBBH-chief-of-staff.git
+open DBBH-chief-of-staff/index.html
 ```
 
 There is no build step and no dependencies.

@@ -303,6 +303,7 @@ input.q,select.q{font:inherit;font-size:13px;padding:7px 10px;border:1px solid v
         <div class="card"><div class="ch"><h3>Interests</h3><span class="xs muted">% of sign-ups · multi-select</span></div><div id="ch-interests"></div></div>
         <div class="card"><div class="ch"><h3>What they want from dBBH</h3><span class="xs muted">% of sign-ups · multi-select</span></div><div id="ch-looking"></div></div>
       </div>
+      <div class="card" style="margin-top:16px"><div class="ch"><div><h3>Are we programming for what they want?</h3><p class="sm muted" style="margin-top:2px;max-width:76ch">Each interest members ticked, against this semester's events that serve it, from each event's topics. Info sessions and fairs serve everyone and aren't counted. What members want from dBBH is matched to the kind of event or program, so application windows for programs count too.</p></div></div><div class="grid g2" id="gaps"></div></div>
       <div class="grid g-12" style="margin-top:16px">
         <div class="card"><div class="ch"><h3>Class year</h3></div><div id="ch-year"></div></div>
         <div class="card">
@@ -523,8 +524,8 @@ function demoData(){
     {name:'Info Session 2',date:rel(-3),time:'7:30-8:30 PM',venue:'Schiciano Auditorium',tag:'GBM',desc:'',rsvp:'yes'},
     {name:'Applications Open · Incubator, Alumni & Corporate',date:rel(1),time:'',venue:'Online',tag:'Deadline',desc:'',rsvp:''},
     {name:'Applications for Buddy Program Due',date:rel(1),time:'',venue:'',tag:'Deadline',desc:'',rsvp:''},
-    {name:'Blueprints for Impact: Career Night',date:rel(6),time:'7-8 PM',venue:'Schiciano B',tag:'Corporate',desc:'',rsvp:'yes'},
-    {name:'Alumni & Industry Relations Networking',date:rel(15),time:'10:30-11:30 AM',venue:'Trent Semans 6th Floor',tag:'Alumni',desc:'',rsvp:''},
+    {name:'Blueprints for Impact: Career Night',date:rel(6),time:'7-8 PM',venue:'Schiciano B',tag:'Corporate',desc:'',rsvp:'yes',topics:'Medicine, Research, Venture Capital, Health Tech'},
+    {name:'Alumni & Industry Relations Networking',date:rel(15),time:'10:30-11:30 AM',venue:'Trent Semans 6th Floor',tag:'Alumni',desc:'',rsvp:'',topics:'Consulting, Medicine'},
     {name:'Incubator Program Application Due',date:rel(23),time:'',venue:'',tag:'Deadline',desc:'',rsvp:''}
   ];
   const pool=members.filter(m=>!m.role||m.role==='Director');
@@ -581,6 +582,7 @@ function localAnswer(q){
   const vp=S.team.find(p=>l.includes(firstName(p.name).toLowerCase()));
   if(vp&&/1:1|1-1|one.on.one|bring|prep/.test(l)) return localPrep(vp);
   if(S.fm&&/budget|fund|money|request|sofc|\broom|forecast|turnout|how many people/.test(l)) return fAnswer();
+  if(/gap|programming for|what (do )?(members|they) want|unserved|interest/.test(l)){ const G=programmingGaps(A); return G.gaps.length?`Unserved this semester: ${G.gaps.map(g=>`${g.k} (${Math.round(g.share*100)}% of members)`).join(', ')}. ${G.gaps[0].k} is the biggest gap: worth a speaker or workshop before finals. Served: ${G.interests.filter(r=>r.serving.length).map(r=>r.k).join(', ')}.`:'Every interest at least a quarter of members picked has an event this semester.'; }
   if(/no.?show|didn.?t (come|show)|never (came|come|attended)|hasn.?t come|follow.?up with/.test(l)) return followAnswer();
   if(/nudge|portal/.test(l)){ const a=open.find(x=>/portal/i.test(x.title))||open[0]; return localDraft('action',a); }
   if(/weakest|weak|gap|thin|demograph|year/.test(l)){ const y=A.year; const total=A.signups; const pct=k=>Math.round(100*(y[k]||0)/total); return `Weakest by class year: 2027 (${y['2027']||0}, ${pct('2027')}%) and 2028 (${y['2028']||0}, ${pct('2028')}%) against 2030 at ${y['2030']||0} (${pct('2030')}%). Weakest by retention: ${A.returning} of ${A.oldRoster} last-year members are back (${Math.round(100*A.returning/Math.max(1,A.oldRoster))}%).\n\nWhat to do: point the corporate coffee chats and the alumni networking session at seniors explicitly (recruiting help is what they want), and send a second touch to the ${A.oldRoster-A.returning} members who haven't re-signed. Both are already on the action list, owned by Sara and Lena.`; }
@@ -672,6 +674,7 @@ function renderBrief(A){
   if(S.fm) for(const it of S.fm.plan){ const P=it.P,R=it.R;
     if(R.fit==='crit'||R.fit==='warn') sig.push([R.fit,`${esc(it.name)} may outgrow ${esc(it.venue)}`,`Forecast ${P.low}–${P.high} people (likely ${P.likely}); the room holds ${R.cur[1]}.${R.rec&&R.rec!==R.cur?` ${esc(R.rec[0])} (${R.rec[1]}) fits the top of the range.`:''} <button class="btn ghost small" data-go="forecast" style="padding:0 2px">See the forecast →</button>`]);
     const tc=fTimingCost(it); if(tc) sig.push(['warn',`${esc(it.name)}: the timing costs turnout`,tc]); }
+  { const G=programmingGaps(A).gaps; if(G.length) sig.push(['warn',`${esc(G[0].k)} isn't on the calendar`,`${Math.round(G[0].share*100)}% of members picked ${esc(G[0].k)}, and no event this semester serves it.${G.length>1?` Also unserved: ${G.slice(1,4).map(g=>esc(g.k)+' ('+Math.round(g.share*100)+'%)').join(', ')}.`:''} <button class="btn ghost small" data-go="members" style="padding:0 2px">See the gaps →</button>`]); }
   { const FU=followUps(A); if(FU.never.length||FU.noShow.length) sig.push(['warn','People to follow up with',`${FU.noShow.length} RSVP'd to a past event and didn't come; ${FU.never.length} signed up before ${esc(FU.lastEvent?FU.lastEvent.name:'the last event')} and haven't been to anything. <button class="btn ghost small" data-go="members" style="padding:0 2px">See who →</button>`]); }
   if(A.fellows===0) sig.push(['good','Fellows tier is empty, by design',`Invites start at 5 points. ${Object.entries(A.points).filter(([p])=>+p>=3).reduce((s,[,n])=>s+n,0)} members are at 3+ already.`]);
   sig.forEach(([c,t,d])=>{ const s=el('div',{class:'sig '+c}); s.append(el('div',{class:'bar'})); const b=el('div'); b.append(el('div',{class:'t'},t),el('div',{class:'d',html:d})); s.append(b); SG.append(s); });
@@ -688,7 +691,7 @@ function renderBrief(A){
 }
 
 function renderMembers(A){
-  renderFollow(A);
+  renderFollow(A); renderGaps(A);
   $('#mem-tiles').replaceChildren(
     tile('Signed up this year',A.roster,`${A.newM} new · ${A.returning} returning`),
     tile('In the Point Tracker',A.tracked,`${A.notInTracker?`<span style="color:var(--crit)">${A.notInTracker} sign-ups have no tracker row</span>`:'all sign-ups tracked'}`),
@@ -1003,6 +1006,27 @@ $('#fc-assume').addEventListener('click',async()=>{ const c=S.fcfg, M=S.fm.M;
   const rooms=r.rooms.split('\n').map(x=>{ const m=x.match(/^(.*?)[,\t]\s*(\d+)\s*$/); return m&&m[1].trim()?[m[1].trim(),+m[2]]:null; }).filter(Boolean); if(rooms.length) c.rooms=rooms;
   saveConfig('fcfg',c); renderAll(); toast('Assumptions saved'); });
 
+/* ===================== PROGRAMMING GAPS ===================== */
+// Events carry the interests they serve in `topics` (the real version reads a Topics column on the
+// sheet's Events tab). "What members want" is matched to the kind of event or program instead.
+const topicsOf=e=>String(e.topics||'').split(',').map(x=>x.trim()).filter(Boolean);
+const WANT_SERVED=[[/corporate|career/i,['Company connections','Career advice']],[/alumni/i,['Alumni connections','Career advice']],[/workshop|incubator|case comp|hackathon/i,['Hands-on experience']],[/buddy|mentor/i,['Student mentorship']]];
+const wantsOf=e=>{ const k=(e.tag||'')+' '+e.name; return [...new Set(WANT_SERVED.filter(([re])=>re.test(k)).flatMap(([,w])=>w))]; };
+function eventFit(e,m){ const t=topicsOf(e); if(!t.length) return .5; const mi=new Set(m.interests.split(',').map(x=>x.trim())); return t.filter(x=>mi.has(x)).length; }
+function programmingGaps(A){
+  const evs=A.events.filter(e=>e.date&&daysUntil(e.date)>=-60);
+  const row=(k,n,serving)=>({k,n,share:n/Math.max(1,A.signups),serving});
+  const interests=A.interests.filter(([k])=>k.length<30).map(([k,n])=>row(k,n,evs.filter(e=>topicsOf(e).includes(k))));
+  const wants=A.looking.map(([k,n])=>row(k,n,evs.filter(e=>wantsOf(e).includes(k))));
+  const gaps=[...interests,...wants].filter(r=>!r.serving.length&&r.share>=.25).sort((a,b)=>b.share-a.share);
+  return {interests,wants,gaps};
+}
+function renderGaps(A){
+  const G=programmingGaps(A), box=$('#gaps'); box.replaceChildren();
+  const col=(title,rows)=>{ const c=el('div'); c.append(el('div',{class:'fx-h'},title)); rows.forEach(r=>{ const x=el('div',{class:'act',style:'grid-template-columns:1fr auto;padding:8px 0'}); const mid=el('div'); mid.append(el('div',{class:'t'},r.k,' ',el('span',{class:'xs muted',style:'font-weight:400'},`${Math.round(r.share*100)}% of members`)),el('div',{class:'d'},r.serving.length?r.serving.map(e=>e.name).join(' · '):'Nothing this semester serves this yet.')); x.append(mid,r.serving.length?el('span',{class:'pill done'},r.serving.length+' on the calendar'):el('span',{class:'pill '+(r.share>=.25?'now':'week')},'gap')); c.append(x); }); return c; };
+  box.append(col('Interests',G.interests),col('What they want from dBBH',G.wants));
+}
+
 /* ===================== FOLLOW-UPS (per member) ===================== */
 // Per-member history from the check-in form and the RSVP tabs: what each person RSVP'd to, what they
 // came to, and what they RSVP'd to but missed. Exec (VPs, co-presidents, directors) are left out.
@@ -1087,7 +1111,7 @@ $('#refresh').addEventListener('click',()=>{ try{ localStorage.removeItem('cos.l
 
 /* ===================== ASK / DRAFTS (sample) ===================== */
 function context(){
-  const A=agg(); const up=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).sort((a,b)=>a.date-b.date).map(e=>`${fmtD(e.date)} (${daysUntil(e.date)}d): ${e.name} [${e.tag}] ${e.time} ${e.venue} — RSVPs ${rsvpFor(A,e.name)}${e.rsvp?'':' — no RSVP link'}`);
+  const A=agg(); const up=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).sort((a,b)=>a.date-b.date).map(e=>`${fmtD(e.date)} (${daysUntil(e.date)}d): ${e.name} [${e.tag}] ${e.time} ${e.venue} — RSVPs ${rsvpFor(A,e.name)}${e.rsvp?'':' — no RSVP link'}${e.topics?' — topics: '+e.topics:''}`);
   const past=A.events.filter(e=>e.date&&daysUntil(e.date)<0&&!/deadline/i.test(e.tag)).map(e=>`${fmtD(e.date)}: ${e.name} — RSVPs ${rsvpFor(A,e.name)}, turnout ${attFor(A,e.name)}`);
   const acts=S.actions.filter(a=>a.status!=='done').sort(sortActions).map(a=>`[${a.p}] ${a.title} — owner ${a.owner||'?'}, due ${a.due||'?'}${a.note?' — note: '+a.note:''}: ${a.detail}`);
   const team=S.team.map(p=>`${p.name} (${p.role}): ${p.ws}${p.next?' Next: '+p.next+'.':''}${p.notes?' Ella\'s notes: '+p.notes:''}`);
@@ -1100,6 +1124,7 @@ SIGNUPS BY DAY: ${A.byDay.map(([d,n])=>fmtD(d)+' '+n).join(', ')}.
 BUDDY PROGRAM: ${A.buddy} applicants (due Sep 12). Alumni interest responses: ${A.alumni}.
 DATA ISSUES: interests header broken=${A.badHeader}; previous-membership point on ${A.prevCredit} of ${A.roster}; attendance credit by tracker column=${JSON.stringify(A.creditByCol)}; attendance form=${JSON.stringify(A.attendance)}; returning column blank=${A.returningBlank}.
 UPCOMING EVENTS:\n${up.join('\n')}
+PROGRAMMING GAPS (interest or want, share of members, events this semester serving it):\n${(()=>{ const G=programmingGaps(A); return [...G.interests,...G.wants].map(r=>`${r.k} ${Math.round(r.share*100)}%: ${r.serving.map(e=>e.name).join('; ')||'none'}`).join('\n'); })()}
 PAST EVENTS:\n${past.join('\n')}
 OPEN ACTIONS:\n${acts.join('\n')}
 TEAM:\n${team.join('\n')}

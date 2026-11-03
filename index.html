@@ -86,6 +86,7 @@ main{padding:28px 36px 60px;max-width:1180px;width:100%;min-width:0}
 .vh{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap}
 .vh .sub{color:var(--muted);margin-top:6px;max-width:62ch}
 .grid{display:grid;gap:16px}
+.grid>*{min-width:0}
 .g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
 .g-21{grid-template-columns:2fr 1fr}.g-12{grid-template-columns:1fr 2fr}
 @media (max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g3,.g-21,.g-12{grid-template-columns:1fr}}
@@ -93,7 +94,7 @@ main{padding:28px 36px 60px;max-width:1180px;width:100%;min-width:0}
 .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
 .card.flat{background:transparent;border-color:var(--line)}
 .card h3{margin-bottom:10px}
-.card .ch{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.card .ch{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .card .ch .eyebrow{margin:0}
 .tile{display:flex;flex-direction:column;gap:6px}
 .tile .big{font-family:"Instrument Serif",serif;font-size:40px;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -305,7 +306,7 @@ input.q,select.q{font:inherit;font-size:13px;padding:7px 10px;border:1px solid v
       <div class="grid g-12" style="margin-top:16px">
         <div class="card"><div class="ch"><h3>Class year</h3></div><div id="ch-year"></div></div>
         <div class="card">
-          <div class="ch"><h3>Members</h3><div class="row"><input class="q" id="mq" placeholder="Search name, NetID, major…" style="width:220px"><select class="q" id="mstatus"><option value="">All tiers</option></select><select class="q" id="myear"><option value="">All years</option></select></div></div>
+          <div class="ch"><h3>Members</h3><div class="row wrap"><input class="q" id="mq" placeholder="Search name, NetID, major…" style="width:220px;max-width:100%"><select class="q" id="mstatus"><option value="">All tiers</option></select><select class="q" id="myear"><option value="">All years</option></select></div></div>
           <div class="tblwrap" id="mtable"><div class="empty">Loading demo members…</div></div>
         </div>
       </div>

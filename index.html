@@ -1196,6 +1196,34 @@ function initDemo(){
 }
 $('#refresh').addEventListener('click',()=>{ try{ localStorage.removeItem('cos.local'); }catch(e){} S.rsvpMap={}; S.enrich={}; S.intros={}; S.chat=[]; $('#msgs').replaceChildren(); initDemo(); toast('Demo reset'); });
 
+/* ===================== ASK: LOOKUP TOOLS ===================== */
+// Read-only lookups Claude can call from the Ask tab, so it can answer about specific people instead of
+// only the totals in the context. They return names, year, major, interests and attendance; never
+// emails or NetIDs. Each call is capped to keep results small.
+const TOOLS_NOTE='You can look up individual members and event attendance with the find_members, member_profile and event_people tools. The context below only has totals, so use a tool when the question is about specific people. Name people only when Ella asks for names.';
+function memberCard(m,H){ const h=H.get(m.netid)||{came:[],rsvp:[],missed:[]}; return {name:m.name,year:m.year,major:m.major,interests:m.interests,wants:m.looking,tier:m.status,points:m.points,returning:m.returning,signed_up:m.ts?isoD(m.ts):null,came_to:h.came,rsvpd_to:h.rsvp,rsvpd_but_missed:h.missed,about:S.enrich[m.netid]||undefined}; }
+function askTools(bubble){
+  const note=t=>{ if(bubble.classList.contains('busy')) bubble.textContent=t; };
+  return [
+    {name:'find_members',description:'Search this year\'s members. Returns up to `limit` (default 15, max 40) as name, year, major, interests, what they want, tier and attendance, plus the total that matched. Filters combine.',
+     inputSchema:{type:'object',properties:{text:{type:'string',description:'Matches name, major, interests or wants'},year:{type:'string',description:'Class year, e.g. 2029'},interest:{type:'string'},attendance:{type:'string',enum:['any','never','came','missed_rsvp'],description:'never = signed up, no check-ins; came = at least one check-in; missed_rsvp = RSVP\'d to a past event and did not come'},include_exec:{type:'boolean'},limit:{type:'number'}}},
+     execute(i){ note('Looking up members…'); const A=agg(), H=memberHistory(A); const t=String(i.text||'').toLowerCase(), y=String(i.year||''), it=String(i.interest||'').toLowerCase(), at=String(i.attendance||'any'); const lim=Math.min(40,Math.max(1,+i.limit||15));
+       const rows=A.members.filter(m=>!m.trackerOnly&&(i.include_exec||!m.role)).filter(m=>{ const h=H.get(m.netid)||{came:[],missed:[]}; return (!t||(m.name+' '+m.major+' '+m.interests+' '+m.looking).toLowerCase().includes(t))&&(!y||m.year===y)&&(!it||m.interests.toLowerCase().includes(it))&&(at==='any'||(at==='never'?!h.came.length:at==='came'?h.came.length>0:h.missed.length>0)); });
+       return {total:rows.length,members:rows.slice(0,lim).map(m=>memberCard(m,H))}; }},
+    {name:'member_profile',description:'One member by name (full or partial). Returns their profile, attendance history, RSVPs, missed RSVPs and any note Ella added. Returns candidates if the name is ambiguous.',
+     inputSchema:{type:'object',properties:{name:{type:'string'}},required:['name']},
+     execute(i){ note('Looking up a member…'); const A=agg(), H=memberHistory(A), n=String(i.name||'').toLowerCase().trim(); if(!n) throw new Error('name is required'); const hits=A.members.filter(m=>m.name.toLowerCase().includes(n)); if(!hits.length) throw new Error('No member matches "'+i.name+'"'); if(hits.length>1&&!hits.some(m=>m.name.toLowerCase()===n)) return {ambiguous:true,candidates:hits.slice(0,10).map(m=>m.name+' ('+m.year+')')}; return memberCard(hits.find(m=>m.name.toLowerCase()===n)||hits[0],H); }},
+    {name:'event_people',description:'People for one event: who RSVP\'d, who came (checked in), who RSVP\'d and did not come, or (upcoming events) who to invite. Returns counts and up to `limit` names (default 25, max 60) with year and major.',
+     inputSchema:{type:'object',properties:{event:{type:'string',description:'Event name or part of it'},list:{type:'string',enum:['rsvp','came','noshow','invite']},limit:{type:'number'}},required:['event','list']},
+     execute(i){ note('Looking up an event…'); const A=agg(), H=memberHistory(A), q=normName(i.event); const e=A.events.find(x=>normName(x.name).includes(q)); if(!e) throw new Error('No event matches "'+i.event+'". Events: '+A.events.filter(x=>!/deadline/i.test(x.tag)).map(x=>x.name).join('; '));
+       const lim=Math.min(60,Math.max(1,+i.limit||25)), byId=new Map(A.members.map(m=>[m.netid,m])), card=m=>({name:m.name,year:m.year,major:m.major,interests:m.interests});
+       if(i.list==='invite'){ const it=S.fm.plan.find(x=>x.name===e.name); if(!it) throw new Error(e.name+' is not upcoming'); const L=inviteList(A,it); return {event:e.name,eligible:L.rows.length,already_rsvpd:L.rsvpd,invite:L.rows.slice(0,lim).map(r=>({...card(r.m),shared_topics:r.shared,events_came:r.c}))}; }
+       const ids=i.list==='came'?S.data.attendance.filter(a=>normName(a.event)===normName(e.name)).map(a=>a.netid):A.rsvpTabs.filter(t=>(S.rsvpMap[t.key]||guessMap(A,t))===e.name).flatMap(t=>t.ids||[]);
+       let people=[...new Set(ids)].map(id=>byId.get(id)).filter(Boolean); if(i.list==='noshow') people=people.filter(m=>(H.get(m.netid)||{missed:[]}).missed.includes(e.name));
+       return {event:e.name,date:e.date?isoD(e.date):null,list:i.list,count:people.length,people:people.slice(0,lim).map(card)}; }}
+  ];
+}
+
 /* ===================== ASK / DRAFTS (sample) ===================== */
 function context(){
   const A=agg(); const up=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).sort((a,b)=>a.date-b.date).map(e=>`${fmtD(e.date)} (${daysUntil(e.date)}d): ${e.name} [${e.tag}] ${e.time} ${e.venue} — RSVPs ${rsvpFor(A,e.name)}${e.rsvp?'':' — no RSVP link'}${e.topics?' — topics: '+e.topics:''}`);
@@ -1227,8 +1255,11 @@ async function ask(){
   const q=$('#askq').value.trim(); if(!q) return; const sample=await ensureSample();
   if(!sample){ $('#askq').value=''; const M=$('#msgs'); M.append(el('div',{class:'msg u'},q)); const a=el('div',{class:'msg a'},localAnswer(q)); M.append(a); a.scrollIntoView({block:'end'}); return; }
   $('#askq').value=''; const M=$('#msgs'); M.append(el('div',{class:'msg u'},q)); const a=el('div',{class:'msg a busy'},'Thinking…'); M.append(a); a.scrollIntoView({block:'end'});
-  S.chat.push({role:'user',content:q}); const turns=[{role:'user',content:SYS+'\n\nCONTEXT:\n'+context()+'\n\n(Conversation follows.)'},{role:'assistant',content:'Understood. What do you need?'},...S.chat.slice(-8)];
-  try{ const r=await sample(turns,{modelTier:'default',cache:false,onText:u=>{a.classList.remove('busy'); a.textContent=u.text;}}); a.classList.remove('busy'); a.textContent=r.text; S.chat.push({role:'assistant',content:r.text}); }
+  S.chat.push({role:'user',content:q});
+  const lim=await (sample.limits?sample.limits().catch(()=>null):null); const useTools=!!(lim&&lim.tools);
+  const turns=[{role:'user',content:SYS+(useTools?'\n\n'+TOOLS_NOTE:'')+'\n\nCONTEXT:\n'+context()+'\n\n(Conversation follows.)'},{role:'assistant',content:'Understood. What do you need?'},...S.chat.slice(-8)];
+  const opts={modelTier:'default',cache:false,onText:u=>{a.classList.remove('busy'); a.textContent=u.text;}}; if(useTools) opts.tools=askTools(a);
+  try{ const r=await sample(turns,opts); a.classList.remove('busy'); a.textContent=r.text; S.chat.push({role:'assistant',content:r.text}); }
   catch(e){ a.classList.remove('busy'); a.textContent=e&&e.code==='not_granted'?'You declined AI access for this page.':e&&e.code==='rate_limited'?'Rate limited — try again in a minute.':'Could not answer: '+(e&&e.message||'unknown error'); }
   a.scrollIntoView({block:'end'});
 }

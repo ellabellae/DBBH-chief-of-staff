@@ -693,7 +693,7 @@ function renderBrief(A){
   for(const it of items){ const r=el('div',{class:'ev'}); r.append(el('div',{class:'date'},String(it.d.getDate()),el('small',{},it.d.toLocaleDateString('en-US',{weekday:'short'})))); const mid=el('div'); mid.append(el('div',{class:'t'},it.t),el('div',{class:'m'},it.m)); r.append(mid); r.append(el('div',{class:'n'},it.n)); W.append(r); }
   // meetings
   const M=$('#meet-steps'); M.replaceChildren(); if(!S.meetings.length) M.append(el('div',{class:'empty'},'No recent meetings.'));
-  for(const m of S.meetings.slice(0,4)){ const c=el('div'); const hd=el('div',{class:'row spread'}); hd.append(el('div',{class:'t',style:'font-weight:600'},m.title),el('span',{class:'xs muted'},m.when)); c.append(hd); const ul=el('ul',{style:'margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)'}); (m.steps.length?m.steps:['No next steps captured.']).slice(0,6).forEach(s=>ul.append(el('li',{},s))); c.append(ul); if(m.link) c.append(el('a',{href:m.link,target:'_blank',class:'xs'},'Open notes')); M.append(c); }
+  for(const m of S.meetings.slice(0,4)){ const c=el('div'); const hd=el('div',{class:'row spread'}); hd.append(el('div',{class:'t',style:'font-weight:600'},m.title),el('span',{class:'xs muted'},m.when)); c.append(hd); const ul=el('ul',{style:'margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--ink-2)'}); if(!m.steps.length) ul.append(el('li',{},'No next steps captured.')); m.steps.slice(0,6).forEach(st=>ul.append(stepItem(m,st))); c.append(ul); if(m.link) c.append(el('a',{href:m.link,target:'_blank',class:'xs'},'Open notes')); M.append(c); }
 }
 
 function renderMembers(A){
@@ -1096,6 +1096,23 @@ function weeklyText(){ const A=agg(), W=weekDelta(A), F=S.fm, G=programmingGaps(
     `• Actions: ${W.done} closed this week, ${W.open} open, ${W.overdue} overdue.`,
     W.shift&&Math.abs(W.shift.d)>=.08?`• Interest shift: ${W.shift.k} at ${Math.round(W.shift.now*100)}% of new sign-ups vs ${Math.round(W.shift.before*100)}% before.`:''].filter(Boolean).join('\n'); }
 $('#wk-draft').addEventListener('click',()=>draftFor('weekly',null));
+
+/* ===================== MEETING NEXT STEPS -> ACTIONS ===================== */
+// "Lena: reconcile …" or "Ethan to scope …" gives the owner; anything else goes to Ella. A step is
+// "already tracked" if an action came from it, or an open action shares most of its key words.
+function parseStep(st){ const names=[...S.team.map(p=>firstName(p.name)),'Ella']; let owner='',title=st.trim();
+  let m=title.match(/^([A-Z][a-z]+)\s*:\s*(.+)$/); if(m&&names.includes(m[1])){ owner=m[1]; title=m[2]; }
+  else { m=title.match(/^([A-Z][a-z]+)\s+to\s+(.+)$/); if(m&&names.includes(m[1])){ owner=m[1]; title=m[2]; } }
+  return {owner:owner||'Ella',title:title.charAt(0).toUpperCase()+title.slice(1)}; }
+const stepKey=(m,st)=>normName(m.title+' '+m.when+' '+st);
+function stepTracked(m,st){ const k=stepKey(m,st); const a=S.actions.find(x=>x.fromStep===k); if(a) return a; const w=kw(parseStep(st).title); if(w.size<2) return null;
+  return S.actions.find(x=>{ const v=kw(x.title+' '+(x.detail||'')); const hit=[...w].filter(t=>v.has(t)).length; return hit/w.size>=.6; })||null; }
+function stepItem(m,st){ const li=el('li',{style:'margin:2px 0'}); li.append(st+' '); const t=stepTracked(m,st);
+  if(t) li.append(el('span',{class:'pill '+(t.status==='done'?'done':'tag'),title:t.title},t.status==='done'?'done':'already tracked'));
+  else li.append(el('button',{class:'btn ghost small',style:'padding:0 4px',onclick:()=>addFromStep(m,st)},'+ Action'));
+  return li; }
+function addFromStep(m,st){ const p=parseStep(st); const a={id:'u'+Date.now().toString(36),p:'week',title:p.title,detail:`From ${m.title} (${m.when}).`,owner:p.owner,due:isoD(addDays(TODAY,7)),src:'Meeting · '+m.title,status:'open',createdAt:new Date().toISOString(),fromStep:stepKey(m,st)};
+  S.actions.push(a); saveAction(a); renderAll(); toast(`Added for ${p.owner}, due ${fmtD(addDays(TODAY,7))} — edit it in Actions`); }
 
 /* ===================== FOLLOW-UPS (per member) ===================== */
 // Per-member history from the check-in form and the RSVP tabs: what each person RSVP'd to, what they

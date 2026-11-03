@@ -284,6 +284,7 @@ input.q,select.q{font:inherit;font-size:13px;padding:7px 10px;border:1px solid v
           <div class="card"><div class="ch"><h3>Signals from the data</h3><span class="xs muted">recomputed on every refresh</span></div><div id="signals"></div></div>
         </div>
         <div class="stack">
+          <div class="card"><div class="ch"><h3>Since last week</h3><button class="btn ghost small" id="wk-draft">Draft Sunday update</button></div><div id="wk"></div></div>
           <div class="card"><div class="ch"><h3>This week</h3><span class="xs muted" id="week-range"></span></div><div id="week"></div></div>
           <div class="card"><div class="ch"><h3>From your last meetings</h3><span class="xs muted">Wispr Flow next steps</span></div><div id="meet-steps" class="stack"></div></div>
         </div>
@@ -574,6 +575,7 @@ function localDraft(kind,obj){
   if(kind==='funding') return fFundingText();
   if(kind==='nudge') return nudgeText(obj);
   if(kind==='invite') return inviteText(obj);
+  if(kind==='weekly') return weeklyText();
   if(kind==='checkin'){ const open=openFor(obj); return `Hi ${firstName(obj.name)} — quick check-in on ${obj.ws.split('.')[0].toLowerCase()}. ${open[0]?`Where do things stand on "${open[0].title.toLowerCase()}"? If it's on track for ${open[0].due?fmtD(parseISO(open[0].due)):'this week'}, just say so; if not, tell me what you need and I'll clear it.`:'What is the one thing you need from me this week?'} Thanks for carrying this.\n\nElla`; }
   if(kind==='action') return `Hi ${obj.owner||'team'} — one ask: ${obj.title.toLowerCase()}. ${obj.detail} Can you have it done by ${obj.due?fmtD(parseISO(obj.due)):'end of week'}? Reply here if anything's in the way.\n\nElla`;
   if(kind==='intro'){ const a=obj.a,b=obj.b; const shared=[...obj.si,...obj.sl,...obj.sk].join(', ')||'the health economy'; return `${firstName(a.name)}, ${firstName(b.name)} — you two should meet. You're both into ${shared}${obj.sameYear?', and you are the same year':''}. ${firstName(a.name)} is ${a.major}; ${firstName(b.name)} is ${b.major}. Pick a coffee slot this week and let me know how it goes.\n\nElla`; }
@@ -588,6 +590,7 @@ function localAnswer(q){
   if(/no.?show|didn.?t (come|show)|never (came|come|attended)|hasn.?t come|follow.?up with/.test(l)) return followAnswer();
   if(/nudge|portal/.test(l)){ const a=open.find(x=>/portal/i.test(x.title))||open[0]; return localDraft('action',a); }
   if(/weakest|weak|gap|thin|demograph|year/.test(l)){ const y=A.year; const total=A.signups; const pct=k=>Math.round(100*(y[k]||0)/total); return `Weakest by class year: 2027 (${y['2027']||0}, ${pct('2027')}%) and 2028 (${y['2028']||0}, ${pct('2028')}%) against 2030 at ${y['2030']||0} (${pct('2030')}%). Weakest by retention: ${A.returning} of ${A.oldRoster} last-year members are back (${Math.round(100*A.returning/Math.max(1,A.oldRoster))}%).\n\nWhat to do: point the corporate coffee chats and the alumni networking session at seniors explicitly (recruiting help is what they want), and send a second touch to the ${A.oldRoster-A.returning} members who haven't re-signed. Both are already on the action list, owned by Sara and Lena.`; }
+  if(/sunday|weekly|since last week|this week.*(numbers|update)/.test(l)) return weeklyText();
   if(/update|bullets|exec/.test(l)){ const up=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).sort((a,b)=>a.date-b.date).slice(0,2); return ['Sunday exec update',`• ${A.roster} signed up this year (${A.returning} returning, ${A.newM} new).`,`• Info Session 2: ${attFor(A,'Info Session 2')} checked in on ${rsvpFor(A,'Info Session 2')} RSVPs.`,`• Next up: ${up.map(e=>e.name+' ('+fmtD(e.date)+')').join('; ')}.`,`• ${open.filter(a=>a.p==='now').length} actions need attention now: ${open.filter(a=>a.p==='now').map(a=>a.title.toLowerCase()).join('; ')}.`,`• Buddy Program: ${A.buddy} applications; pairings go out after the deadline.`,`• Ask: every VP confirms their portal sign-up by Sunday night.`].join('\n'); }
   if(/check-?in|needs/.test(l)){ const ranked=S.team.map(p=>({p,n:openFor(p).filter(a=>a.p==='now'||(a.due&&parseISO(a.due)<TODAY)).length,t:openFor(p).length})).sort((a,b)=>b.n-a.n||b.t-a.t); const top=ranked[0]; return `${top.p.name} (${top.p.role}): ${top.n} urgent or overdue of ${top.t} open — ${openFor(top.p).slice(0,3).map(a=>a.title.toLowerCase()).join('; ')}. Runner-up: ${ranked[1].p.name} with ${ranked[1].t} open. Use "Draft check-in" on the Team tab for the message.`; }
   if(/info session|accomplish/.test(l)) return `Info Session 2 should do three things: convert the ${A.roster - A.tracked} sign-ups without a tracker row into members who check in (the QR station up before doors), show the portal login live so people see their points, and announce the ${fmtD(rel(1))} application dates for Incubator, Alumni and Corporate with one clear call to action each.`;
@@ -648,6 +651,7 @@ function pillP(p){ return el('span',{class:'pill '+p},el('span',{class:'ic'}),p=
 function renderAll(){ const A=agg(); S.fm=fModel(A); renderBrief(A); renderMembers(A); renderEvents(A); renderForecast(A); renderInvite(A); renderTeam(A); renderActions(A); renderAsks(); $('#n-forecast').textContent=S.fm.plan.length;const open=S.actions.filter(a=>a.status!=='done'); $('#n-brief').textContent=open.filter(a=>a.p==='now').length; $('#n-members').textContent=A.roster; $('#n-events').textContent=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).length; $('#n-team').textContent=S.team.length; $('#n-actions').textContent=open.length; }
 
 function renderBrief(A){
+  renderWeek(A);
   const d=new Date(); $('#today').textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const h=d.getHours(); $('#greet').textContent=(h<12?'Morning':h<17?'Afternoon':'Evening')+' brief, Ella';
   const next=A.events.filter(e=>e.date&&daysUntil(e.date)>=0&&!/deadline/i.test(e.tag)).sort((a,b)=>a.date-b.date)[0];
@@ -1059,6 +1063,40 @@ $('#inv-ev').addEventListener('change',()=>renderInvite(agg())); $('#inv-n').add
 $('#inv-copy').addEventListener('click',async()=>{ const A=agg(); const it=S.fm.plan.find(x=>x.key===$('#inv-ev').value); if(!it) return; const rows=inviteList(A,it).rows.slice(0,+$('#inv-n').value); try{ await navigator.clipboard.writeText(rows.map(r=>r.m.email).join(', ')); toast(`Copied ${rows.length} emails — paste into BCC`); }catch(e){ toast('Copy blocked by the browser'); } });
 function inviteText(o){ const {m,it,shared}=o; const day=it.date.toLocaleDateString('en-US',{weekday:'long'}); return `Hi ${firstName(m.name)} — ${it.name} is ${day}, ${fmtD(it.date)} at ${fmtHour(it.hour)}${it.venue?' in '+it.venue:''}. ${shared.length?`Since you're into ${shared.slice(0,2).join(' and ').toLowerCase()}, I think you'd get a lot out of it.`:'I think you’d get a lot out of it.'} Would you come? If you can, RSVP so we plan enough food${it.food?'':' and seats'}.\n\nElla`; }
 
+/* ===================== SINCE LAST WEEK ===================== */
+// Worked out from timestamps already in the data (sign-up times, check-in times, when actions were
+// closed), so it needs no saved snapshots and is right on the first open.
+function weekDelta(A){
+  const wk=addDays(TODAY,-7), wk2=addDays(TODAY,-14); const su=A.members.filter(m=>!m.trackerOnly&&m.ts);
+  const newM=su.filter(m=>m.ts>wk), old=su.filter(m=>m.ts<=wk); const att=S.data.attendance;
+  const cameNow=new Set(att.map(a=>a.netid)), cameThen=new Set(att.filter(a=>a.ts<=wk).map(a=>a.netid));
+  const shareOf=(rows,k)=>rows.filter(m=>m.interests.split(',').map(x=>x.trim()).includes(k)).length/Math.max(1,rows.length);
+  const shift=newM.length>=10?A.interests.filter(([k])=>k.length<30).map(([k])=>({k,now:shareOf(newM,k),before:shareOf(old,k)})).map(x=>({...x,d:x.now-x.before})).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d))[0]:null;
+  return {roster:su.length,newM:newM.length,cameNow:cameNow.size,cameThen:cameThen.size,checkWk:att.filter(a=>a.ts>wk).length,checkPrev:att.filter(a=>a.ts>wk2&&a.ts<=wk).length,
+    retNow:su.filter(m=>m.returning).length,retNew:newM.filter(m=>m.returning).length,done:S.actions.filter(a=>a.status==='done'&&a.doneAt&&new Date(a.doneAt)>wk).length,
+    overdue:S.actions.filter(a=>a.status!=='done'&&a.due&&parseISO(a.due)<TODAY).length,open:S.actions.filter(a=>a.status!=='done').length,shift};
+}
+function renderWeek(A){
+  const W=weekDelta(A), box=$('#wk'); box.replaceChildren(); const k=el('div',{class:'money',style:'font-size:13px'});
+  const row=(label,val,delta)=>{ k.append(el('div',{class:'dim'},label),el('div',{},el('b',{},String(val)),delta?el('span',{class:'xs',style:'margin-left:6px;color:var(--good)'},delta):null)); };
+  row('Signed up',W.roster,W.newM?`+${W.newM} this week`:'');
+  row('Have come to an event',W.cameNow,W.cameNow>W.cameThen?`+${W.cameNow-W.cameThen} first-timers`:'');
+  row('Check-ins this week',W.checkWk,`${W.checkPrev} the week before`); k.lastChild.lastChild.style.color='var(--muted)';
+  row('Returning members',W.retNow,W.retNew?`+${W.retNew}`:'');
+  row('Actions closed this week',W.done,''); k.lastChild.append(el('span',{class:'xs',style:'margin-left:6px;color:'+(W.overdue?'var(--crit)':'var(--muted)')},`${W.overdue} overdue · ${W.open} open`));
+  box.append(k); if(W.shift&&Math.abs(W.shift.d)>=.08) box.append(el('p',{class:'sm dim',style:'margin-top:10px'},`Interest shift: ${Math.round(W.shift.now*100)}% of this week's sign-ups picked ${W.shift.k}, against ${Math.round(W.shift.before*100)}% before.`));
+}
+function weeklyText(){ const A=agg(), W=weekDelta(A), F=S.fm, G=programmingGaps(A).gaps, FU=followUps(A); const nx=F&&F.plan[0];
+  return ['Sunday exec update',
+    `• Membership: ${W.roster} signed up (+${W.newM} this week); ${W.retNow} returning.`,
+    `• Showing up: ${W.cameNow} members have come to at least one event (+${W.cameNow-W.cameThen} first-timers this week); ${W.checkWk} check-ins this week vs ${W.checkPrev} the week before.`,
+    nx?`• Next up: ${nx.name} (${fmtD(nx.date)}) — forecast ${nx.P.likely} (range ${nx.P.low}–${nx.P.high}), ${nx.rsvps} RSVPs, ${nx.venue||'no room yet'}${nx.R.cur?` holds ${nx.R.cur[1]}`:''}.`:'• No events on the calendar.',
+    `• Follow-ups: ${FU.noShow.length} RSVP'd and didn't come; ${FU.never.length} signed up and haven't come yet. Asks: personal notes this week.`,
+    G.length?`• Programming gap: ${G.map(g=>`${g.k} (${Math.round(g.share*100)}%)`).join(', ')} with nothing on the calendar.`:'• Programming: every major interest has an event this semester.',
+    `• Actions: ${W.done} closed this week, ${W.open} open, ${W.overdue} overdue.`,
+    W.shift&&Math.abs(W.shift.d)>=.08?`• Interest shift: ${W.shift.k} at ${Math.round(W.shift.now*100)}% of new sign-ups vs ${Math.round(W.shift.before*100)}% before.`:''].filter(Boolean).join('\n'); }
+$('#wk-draft').addEventListener('click',()=>draftFor('weekly',null));
+
 /* ===================== FOLLOW-UPS (per member) ===================== */
 // Per-member history from the check-in form and the RSVP tabs: what each person RSVP'd to, what they
 // came to, and what they RSVP'd to but missed. Exec (VPs, co-presidents, directors) are left out.
@@ -1184,6 +1222,7 @@ async function draftFor(kind,obj){
   const sample=await ensureSample();
   let title,sub,prompt;
   if(kind==='funding'){ title='Funding request'; sub='From the forecast · check the numbers before sending'; prompt=`Write the funding request dBBH's VP Finance can submit to the student organization funding committee for our upcoming events. Use exactly the numbers below and do not invent costs. Format: a 2–3 sentence overview with the total; a short 'How we sized this' paragraph explaining the forecast in plain words; one line per event; a one-line close signed by Ella. Under 260 words.\n\n${fFundingText()}`; }
+  else if(kind==='weekly'){ title='Sunday exec update'; sub='From this week’s numbers · edit before sending'; prompt=`Write Ella's Sunday exec update for the dBBH exec group chat: 6-8 short bullets, numbers first, then one line of asks for the team. Use exactly these numbers and don't add any:\n\n${weeklyText()}`; }
   else if(kind==='invite'){ const {m,it,shared}=obj; title='Invite · '+firstName(m.name); sub=`${it.name} · ${fmtD(it.date)}`; prompt=`Write a 50-80 word personal invitation from Ella to dBBH member ${m.name} (class of ${m.year}, ${m.major}, interests: ${m.interests}, wants: ${m.looking}) to ${it.name} on ${it.date.toDateString()} at ${fmtHour(it.hour)}${it.venue?' in '+it.venue:''}. Event topics: ${(A=>{ const e=A.events.find(x=>x.name===it.name); return e&&e.topics||'general'; })(agg())}. Lead with why it fits them (${shared.join(', ')||'their interests'}). Ask them to RSVP. Warm, specific, no exclamation marks, sign as Ella.`; }
   else if(kind==='nudge'){ const m=obj.m, ev=nextEventFor(agg(),m); title='Nudge · '+firstName(m.name); sub=obj.kind==='noshow'?`RSVP'd to ${obj.h.missed.join(', ')} and didn't come`:`Signed up ${fmtD(m.ts)}, hasn't come to anything`; prompt=`Write a 50-80 word personal note from Ella to dBBH member ${m.name} (class of ${m.year}, ${m.major}, interests: ${m.interests}, wants: ${m.looking}). Situation: ${obj.kind==='noshow'?`they RSVP'd to ${obj.h.missed.join(', ')} but didn't come. Don't guilt them; ask lightly if timing or format got in the way.`:`they signed up on ${fmtD(m.ts)} and haven't come to any event yet. Make the first step feel small.`} Invite them to ${ev?`${ev.name} on ${fmtD(ev.date)}${ev.time?' at '+ev.time:''}${ev.venue?' in '+ev.venue:''}`:'the next event'}, tied to one of their interests. Warm, specific, no exclamation marks, sign as Ella.`; }
   else if(kind==='prep'){ title='1:1 prep · '+obj.name.split(' ')[0]; sub=obj.role; prompt=`Prepare a 1:1 agenda for Ella's next meeting with ${obj.name} (${obj.role}). Format: 3-5 agenda items, each with the specific question to ask and the data point behind it; then 'Decisions needed' and 'Follow-ups to confirm'. Keep it under 220 words.`; }

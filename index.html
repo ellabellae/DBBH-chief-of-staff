@@ -310,6 +310,10 @@ input.q,select.q{font:inherit;font-size:13px;padding:7px 10px;border:1px solid v
           <div class="tblwrap" id="mtable"><div class="empty">Loading demo members…</div></div>
         </div>
       </div>
+      <div class="card" style="margin-top:16px" id="follow-card">
+        <div class="ch"><div><h3>Follow up</h3><p class="sm muted" style="margin-top:2px;max-width:76ch">People the numbers would otherwise hide: who said they'd come and didn't, and who signed up but hasn't been to anything yet. A short personal note now is cheaper than winning them back in spring.</p></div></div>
+        <div class="grid g2" id="follow"></div>
+      </div>
       <div class="card" style="margin-top:16px" id="match-card">
         <div class="ch"><div><h3>Member meet-ups</h3><p class="sm muted" style="margin-top:2px;max-width:70ch">Suggested pairs from the sign-up form: shared interests count double, then what they want from dBBH, same class year, and anything you've added under "About". Pairs you introduce or skip are remembered.</p></div>
           <div class="row wrap"><label class="sm row" style="gap:6px"><input type="checkbox" id="mx-li" checked> Only members who shared a LinkedIn</label><label class="sm row" style="gap:6px"><input type="checkbox" id="mx-exec"> Include exec</label><select class="q" id="mx-n"><option value="8">8 pairs</option><option value="16">16 pairs</option><option value="40">40 pairs</option><option value="999">All</option></select><button class="btn primary small" id="mx-go">Suggest pairs</button></div></div>
@@ -566,6 +570,7 @@ function localPrep(p){ const A=agg(); const open=openFor(p); const lines=[`1:1 w
 function localDraft(kind,obj){
   if(kind==='prep') return localPrep(obj);
   if(kind==='funding') return fFundingText();
+  if(kind==='nudge') return nudgeText(obj);
   if(kind==='checkin'){ const open=openFor(obj); return `Hi ${firstName(obj.name)} — quick check-in on ${obj.ws.split('.')[0].toLowerCase()}. ${open[0]?`Where do things stand on "${open[0].title.toLowerCase()}"? If it's on track for ${open[0].due?fmtD(parseISO(open[0].due)):'this week'}, just say so; if not, tell me what you need and I'll clear it.`:'What is the one thing you need from me this week?'} Thanks for carrying this.\n\nElla`; }
   if(kind==='action') return `Hi ${obj.owner||'team'} — one ask: ${obj.title.toLowerCase()}. ${obj.detail} Can you have it done by ${obj.due?fmtD(parseISO(obj.due)):'end of week'}? Reply here if anything's in the way.\n\nElla`;
   if(kind==='intro'){ const a=obj.a,b=obj.b; const shared=[...obj.si,...obj.sl,...obj.sk].join(', ')||'the health economy'; return `${firstName(a.name)}, ${firstName(b.name)} — you two should meet. You're both into ${shared}${obj.sameYear?', and you are the same year':''}. ${firstName(a.name)} is ${a.major}; ${firstName(b.name)} is ${b.major}. Pick a coffee slot this week and let me know how it goes.\n\nElla`; }
@@ -576,6 +581,7 @@ function localAnswer(q){
   const vp=S.team.find(p=>l.includes(firstName(p.name).toLowerCase()));
   if(vp&&/1:1|1-1|one.on.one|bring|prep/.test(l)) return localPrep(vp);
   if(S.fm&&/budget|fund|money|request|sofc|\broom|forecast|turnout|how many people/.test(l)) return fAnswer();
+  if(/no.?show|didn.?t (come|show)|never (came|come|attended)|hasn.?t come|follow.?up with/.test(l)) return followAnswer();
   if(/nudge|portal/.test(l)){ const a=open.find(x=>/portal/i.test(x.title))||open[0]; return localDraft('action',a); }
   if(/weakest|weak|gap|thin|demograph|year/.test(l)){ const y=A.year; const total=A.signups; const pct=k=>Math.round(100*(y[k]||0)/total); return `Weakest by class year: 2027 (${y['2027']||0}, ${pct('2027')}%) and 2028 (${y['2028']||0}, ${pct('2028')}%) against 2030 at ${y['2030']||0} (${pct('2030')}%). Weakest by retention: ${A.returning} of ${A.oldRoster} last-year members are back (${Math.round(100*A.returning/Math.max(1,A.oldRoster))}%).\n\nWhat to do: point the corporate coffee chats and the alumni networking session at seniors explicitly (recruiting help is what they want), and send a second touch to the ${A.oldRoster-A.returning} members who haven't re-signed. Both are already on the action list, owned by Sara and Lena.`; }
   if(/update|bullets|exec/.test(l)){ const up=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).sort((a,b)=>a.date-b.date).slice(0,2); return ['Sunday exec update',`• ${A.roster} signed up this year (${A.returning} returning, ${A.newM} new).`,`• Info Session 2: ${attFor(A,'Info Session 2')} checked in on ${rsvpFor(A,'Info Session 2')} RSVPs.`,`• Next up: ${up.map(e=>e.name+' ('+fmtD(e.date)+')').join('; ')}.`,`• ${open.filter(a=>a.p==='now').length} actions need attention now: ${open.filter(a=>a.p==='now').map(a=>a.title.toLowerCase()).join('; ')}.`,`• Buddy Program: ${A.buddy} applications; pairings go out after the deadline.`,`• Ask: every VP confirms their portal sign-up by Sunday night.`].join('\n'); }
@@ -666,6 +672,7 @@ function renderBrief(A){
   if(S.fm) for(const it of S.fm.plan){ const P=it.P,R=it.R;
     if(R.fit==='crit'||R.fit==='warn') sig.push([R.fit,`${esc(it.name)} may outgrow ${esc(it.venue)}`,`Forecast ${P.low}–${P.high} people (likely ${P.likely}); the room holds ${R.cur[1]}.${R.rec&&R.rec!==R.cur?` ${esc(R.rec[0])} (${R.rec[1]}) fits the top of the range.`:''} <button class="btn ghost small" data-go="forecast" style="padding:0 2px">See the forecast →</button>`]);
     const tc=fTimingCost(it); if(tc) sig.push(['warn',`${esc(it.name)}: the timing costs turnout`,tc]); }
+  { const FU=followUps(A); if(FU.never.length||FU.noShow.length) sig.push(['warn','People to follow up with',`${FU.noShow.length} RSVP'd to a past event and didn't come; ${FU.never.length} signed up before ${esc(FU.lastEvent?FU.lastEvent.name:'the last event')} and haven't been to anything. <button class="btn ghost small" data-go="members" style="padding:0 2px">See who →</button>`]); }
   if(A.fellows===0) sig.push(['good','Fellows tier is empty, by design',`Invites start at 5 points. ${Object.entries(A.points).filter(([p])=>+p>=3).reduce((s,[,n])=>s+n,0)} members are at 3+ already.`]);
   sig.forEach(([c,t,d])=>{ const s=el('div',{class:'sig '+c}); s.append(el('div',{class:'bar'})); const b=el('div'); b.append(el('div',{class:'t'},t),el('div',{class:'d',html:d})); s.append(b); SG.append(s); });
   // week
@@ -681,6 +688,7 @@ function renderBrief(A){
 }
 
 function renderMembers(A){
+  renderFollow(A);
   $('#mem-tiles').replaceChildren(
     tile('Signed up this year',A.roster,`${A.newM} new · ${A.returning} returning`),
     tile('In the Point Tracker',A.tracked,`${A.notInTracker?`<span style="color:var(--crit)">${A.notInTracker} sign-ups have no tracker row</span>`:'all sign-ups tracked'}`),
@@ -995,6 +1003,43 @@ $('#fc-assume').addEventListener('click',async()=>{ const c=S.fcfg, M=S.fm.M;
   const rooms=r.rooms.split('\n').map(x=>{ const m=x.match(/^(.*?)[,\t]\s*(\d+)\s*$/); return m&&m[1].trim()?[m[1].trim(),+m[2]]:null; }).filter(Boolean); if(rooms.length) c.rooms=rooms;
   saveConfig('fcfg',c); renderAll(); toast('Assumptions saved'); });
 
+/* ===================== FOLLOW-UPS (per member) ===================== */
+// Per-member history from the check-in form and the RSVP tabs: what each person RSVP'd to, what they
+// came to, and what they RSVP'd to but missed. Exec (VPs, co-presidents, directors) are left out.
+function memberHistory(A){
+  const H=new Map(); const get=id=>{ if(!H.has(id)) H.set(id,{came:[],rsvp:[],missed:[]}); return H.get(id); };
+  for(const a of S.data.attendance) get(a.netid).came.push(a.event);
+  const past=new Set(A.events.filter(e=>e.date&&daysUntil(e.date)<0).map(e=>e.name));
+  for(const t of A.rsvpTabs){ const ev=S.rsvpMap[t.key]||guessMap(A,t); if(!ev) continue; for(const id of t.ids||[]){ const h=get(id); h.rsvp.push(ev); if(past.has(ev)&&!h.came.some(c=>normName(c)===normName(ev))) h.missed.push(ev); } }
+  return H;
+}
+function followUps(A){
+  const H=memberHistory(A); const pastEv=A.events.filter(e=>e.date&&daysUntil(e.date)<0&&!/deadline/i.test(e.tag)&&attFor(A,e.name)>0).sort((a,b)=>b.date-a.date);
+  const cutoff=pastEv[0]?pastEv[0].date:TODAY; const general=A.members.filter(m=>!m.role&&!m.trackerOnly);
+  const noShow=general.filter(m=>(H.get(m.netid)||{missed:[]}).missed.length).map(m=>({m,h:H.get(m.netid)})).sort((a,b)=>b.h.missed.length-a.h.missed.length||a.m.name.localeCompare(b.m.name));
+  const never=general.filter(m=>m.ts&&m.ts<cutoff&&!(H.get(m.netid)||{came:[]}).came.length).map(m=>({m,h:H.get(m.netid)||{came:[],rsvp:[],missed:[]}})).sort((a,b)=>a.m.ts-b.m.ts);
+  return {noShow,never,H,lastEvent:pastEv[0]};
+}
+function nextEventFor(A,m){ const up=A.events.filter(e=>e.date&&daysUntil(e.date)>=0&&!/deadline/i.test(e.tag)).sort((a,b)=>a.date-b.date); return (typeof eventFit==='function'?up.find(e=>eventFit(e,m)>0):null)||up[0]||null; }
+S.followOpen={};
+function renderFollow(A){
+  const F=followUps(A), box=$('#follow'); box.replaceChildren();
+  const list=(key,title,sub,rows,why)=>{ const c=el('div'); const open=S.followOpen[key]; const hd=el('div',{class:'row spread wrap',style:'margin-bottom:6px'}); hd.append(el('div',{},el('div',{class:'t',style:'font-weight:600'},`${title} · ${rows.length}`),el('div',{class:'xs muted'},sub)));
+    hd.append(el('button',{class:'btn small',onclick:async()=>{ try{ await navigator.clipboard.writeText(rows.map(r=>r.m.email).join(', ')); toast(`Copied ${rows.length} emails — paste into BCC`); }catch(e){ toast('Copy blocked by the browser'); } }},'Copy emails')); c.append(hd);
+    if(!rows.length) c.append(el('div',{class:'empty'},'Nobody here.'));
+    (open?rows:rows.slice(0,8)).forEach(({m,h})=>{ const r=el('div',{class:'act',style:'grid-template-columns:1fr auto;padding:8px 0'}); const mid=el('div'); mid.append(el('div',{class:'t'},m.name),el('div',{class:'d'},`${m.year} · ${m.major} · ${why(m,h)}`)); r.append(mid,el('div',{class:'ops'},el('button',{class:'btn ghost small',onclick:()=>draftFor('nudge',{m,kind:key,h})},'Draft nudge'))); c.append(r); });
+    if(rows.length>8) c.append(el('button',{class:'btn ghost small',style:'margin-top:6px',onclick:()=>{ S.followOpen[key]=!open; renderFollow(agg()); }},open?'Show fewer':`Show all ${rows.length}`));
+    return c; };
+  box.append(list('noshow',"RSVP'd, didn't come",'they wanted to come; find out what got in the way',F.noShow,(m,h)=>'missed '+h.missed.join(', ')),
+             list('never',"Signed up, hasn't come yet",`signed up before ${F.lastEvent?F.lastEvent.name:'the last event'}, no check-ins`,F.never,(m)=>`signed up ${fmtD(m.ts)} · into ${(m.interests.split(',')[0]||'—').trim()}`));
+}
+function nudgeText(o){ const A=agg(), m=o.m, ev=nextEventFor(A,m), first=firstName(m.name); const evl=ev?`${ev.name} (${ev.date.toLocaleDateString('en-US',{weekday:'long'})}, ${fmtD(ev.date)}${ev.time?', '+ev.time:''}${ev.venue?', '+ev.venue:''})`:'our next event';
+  if(o.kind==='noshow') return `Hi ${first} — we missed you at ${o.h.missed[o.h.missed.length-1]}. No worries at all; if something about the timing or format made it hard to come, I'd genuinely like to know. The next one I think you'd like is ${evl}. Hope to see you there.\n\nElla`;
+  return `Hi ${first} — thanks for signing up for dBBH. You mentioned ${(m.interests.split(',')[0]||'the health economy').trim().toLowerCase()}, so ${evl} is a good first one to come to. If it helps, reply and I'll introduce you to someone on the team before it starts.\n\nElla`; }
+function followAnswer(){ const A=agg(), F=followUps(A); return [`${F.noShow.length} members RSVP'd to a past event and didn't come; ${F.never.length} signed up before ${F.lastEvent?F.lastEvent.name:'the last event'} and haven't checked in to anything.`,
+  `By class year, hasn't come yet: ${Object.entries(F.never.reduce((o,{m})=>(o[m.year]=(o[m.year]||0)+1,o),{})).sort().map(([y,n])=>y+' '+n).join(', ')}.`,
+  `First to message (RSVP'd, didn't come): ${F.noShow.slice(0,5).map(x=>x.m.name).join(', ')||'nobody'}. The Members tab has both lists, "Copy emails" for a BCC, and a drafted note per person.`].join('\n'); }
+
 /* ===================== MEMBER MATCHING ===================== */
 S.enrich={}; S.intros={};
 const STOP=new Set(['about','their','there','with','from','that','this','have','into','also','very','more','than','what','when','where','which','while','would','could','should','really','being','been','were','will','they','them','then','your','ours','love','like','just','some','other','over','year','years','duke','student','students','health','healthcare','interested','interest','interests','looking','business','club','member']);
@@ -1082,6 +1127,7 @@ async function draftFor(kind,obj){
   const sample=await ensureSample();
   let title,sub,prompt;
   if(kind==='funding'){ title='Funding request'; sub='From the forecast · check the numbers before sending'; prompt=`Write the funding request dBBH's VP Finance can submit to the student organization funding committee for our upcoming events. Use exactly the numbers below and do not invent costs. Format: a 2–3 sentence overview with the total; a short 'How we sized this' paragraph explaining the forecast in plain words; one line per event; a one-line close signed by Ella. Under 260 words.\n\n${fFundingText()}`; }
+  else if(kind==='nudge'){ const m=obj.m, ev=nextEventFor(agg(),m); title='Nudge · '+firstName(m.name); sub=obj.kind==='noshow'?`RSVP'd to ${obj.h.missed.join(', ')} and didn't come`:`Signed up ${fmtD(m.ts)}, hasn't come to anything`; prompt=`Write a 50-80 word personal note from Ella to dBBH member ${m.name} (class of ${m.year}, ${m.major}, interests: ${m.interests}, wants: ${m.looking}). Situation: ${obj.kind==='noshow'?`they RSVP'd to ${obj.h.missed.join(', ')} but didn't come. Don't guilt them; ask lightly if timing or format got in the way.`:`they signed up on ${fmtD(m.ts)} and haven't come to any event yet. Make the first step feel small.`} Invite them to ${ev?`${ev.name} on ${fmtD(ev.date)}${ev.time?' at '+ev.time:''}${ev.venue?' in '+ev.venue:''}`:'the next event'}, tied to one of their interests. Warm, specific, no exclamation marks, sign as Ella.`; }
   else if(kind==='prep'){ title='1:1 prep · '+obj.name.split(' ')[0]; sub=obj.role; prompt=`Prepare a 1:1 agenda for Ella's next meeting with ${obj.name} (${obj.role}). Format: 3-5 agenda items, each with the specific question to ask and the data point behind it; then 'Decisions needed' and 'Follow-ups to confirm'. Keep it under 220 words.`; }
   else if(kind==='checkin'){ title='Check-in to '+obj.name.split(' ')[0]; sub='Short message, dBBH voice'; prompt=`Write a short, warm check-in message (text or email, 80-120 words) from Ella to ${obj.name} (${obj.role}) about their current workstream. Reference one concrete thing they own and one specific ask with a date. No hype.`; }
   else if(kind==='action'){ title='Draft · '+obj.title; sub='Message about this action'; prompt=`Write the message Ella should send to move this action forward: "${obj.title}" — ${obj.detail}. Owner: ${obj.owner||'unknown'}. Due ${obj.due||'unspecified'}. 80-140 words, dBBH voice, one clear ask, a date.`; }

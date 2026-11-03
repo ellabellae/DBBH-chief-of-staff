@@ -346,6 +346,7 @@ input.q,select.q{font:inherit;font-size:13px;padding:7px 10px;border:1px solid v
       <div class="grid g4" id="fc-tiles"></div>
       <div class="card" style="margin-top:16px"><div class="ch"><h3>Upcoming events</h3><span class="xs muted">likely headcount · 80% range · room · request</span></div><div id="fc-list"></div></div>
       <div class="card" style="margin-top:16px" id="fc-sim-card"><div class="ch"><div><h3>What if…</h3><p class="sm muted" style="margin-top:2px">Pick an event and change the day, start time, food or room. The forecast, room check and budget update as you go.</p></div></div><div id="fc-sim"></div></div>
+      <div class="card" style="margin-top:16px" id="inv-card"><div class="ch"><div><h3>Who to invite personally</h3><p class="sm muted" style="margin-top:2px;max-width:80ch">Members who haven't RSVP'd, ranked by how well the event fits their interests and how likely people like them are to come (their class year's turnout so far and their own check-ins). A personal note from an exec works better than another Instagram post.</p></div><div class="row wrap"><select class="q" id="inv-ev"></select><select class="q" id="inv-n"><option value="10">Top 10</option><option value="20">Top 20</option><option value="40">Top 40</option></select><button class="btn small" id="inv-copy">Copy emails</button></div></div><div id="inv-head" style="margin-bottom:8px"></div><div id="inv"></div></div>
       <div class="grid g2" style="margin-top:16px">
         <div class="card"><div class="ch"><h3>What moves turnout</h3><span class="xs muted" id="fc-n"></span></div><div id="fc-factors"></div></div>
         <div class="card"><div class="ch"><h3>Typical turnout by event type</h3><span class="xs muted">weekday evening · no food · 300 members</span></div><div id="fc-types"></div><hr class="sep"><p class="sm dim" id="fc-show"></p></div>
@@ -572,6 +573,7 @@ function localDraft(kind,obj){
   if(kind==='prep') return localPrep(obj);
   if(kind==='funding') return fFundingText();
   if(kind==='nudge') return nudgeText(obj);
+  if(kind==='invite') return inviteText(obj);
   if(kind==='checkin'){ const open=openFor(obj); return `Hi ${firstName(obj.name)} — quick check-in on ${obj.ws.split('.')[0].toLowerCase()}. ${open[0]?`Where do things stand on "${open[0].title.toLowerCase()}"? If it's on track for ${open[0].due?fmtD(parseISO(open[0].due)):'this week'}, just say so; if not, tell me what you need and I'll clear it.`:'What is the one thing you need from me this week?'} Thanks for carrying this.\n\nElla`; }
   if(kind==='action') return `Hi ${obj.owner||'team'} — one ask: ${obj.title.toLowerCase()}. ${obj.detail} Can you have it done by ${obj.due?fmtD(parseISO(obj.due)):'end of week'}? Reply here if anything's in the way.\n\nElla`;
   if(kind==='intro'){ const a=obj.a,b=obj.b; const shared=[...obj.si,...obj.sl,...obj.sk].join(', ')||'the health economy'; return `${firstName(a.name)}, ${firstName(b.name)} — you two should meet. You're both into ${shared}${obj.sameYear?', and you are the same year':''}. ${firstName(a.name)} is ${a.major}; ${firstName(b.name)} is ${b.major}. Pick a coffee slot this week and let me know how it goes.\n\nElla`; }
@@ -643,7 +645,7 @@ function groupedBars(rows){ // rows: [{k, a:rsvp, b:turnout}]
 function tile(label,big,sub,unit){ const t=el('div',{class:'card tile'}); t.append(el('div',{class:'eyebrow'},label)); const b=el('div',{class:'big'},String(big)); if(unit) b.append(el('small',{},unit)); t.append(b); if(sub) t.append(el('div',{class:'delta',html:sub})); return t; }
 function pillP(p){ return el('span',{class:'pill '+p},el('span',{class:'ic'}),p==='now'?'Now':p==='week'?'This week':p==='done'?'Done':'Soon'); }
 
-function renderAll(){ const A=agg(); S.fm=fModel(A); renderBrief(A); renderMembers(A); renderEvents(A); renderForecast(A); renderTeam(A); renderActions(A); renderAsks(); $('#n-forecast').textContent=S.fm.plan.length;const open=S.actions.filter(a=>a.status!=='done'); $('#n-brief').textContent=open.filter(a=>a.p==='now').length; $('#n-members').textContent=A.roster; $('#n-events').textContent=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).length; $('#n-team').textContent=S.team.length; $('#n-actions').textContent=open.length; }
+function renderAll(){ const A=agg(); S.fm=fModel(A); renderBrief(A); renderMembers(A); renderEvents(A); renderForecast(A); renderInvite(A); renderTeam(A); renderActions(A); renderAsks(); $('#n-forecast').textContent=S.fm.plan.length;const open=S.actions.filter(a=>a.status!=='done'); $('#n-brief').textContent=open.filter(a=>a.p==='now').length; $('#n-members').textContent=A.roster; $('#n-events').textContent=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).length; $('#n-team').textContent=S.team.length; $('#n-actions').textContent=open.length; }
 
 function renderBrief(A){
   const d=new Date(); $('#today').textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
@@ -1027,6 +1029,36 @@ function renderGaps(A){
   box.append(col('Interests',G.interests),col('What they want from dBBH',G.wants));
 }
 
+/* ===================== WHO TO INVITE ===================== */
+// Uses only what the page can see: interests vs. the event's topics, each class year's share of sign-ups
+// who have come to anything, and the member's own check-ins.
+function inviteList(A,it){
+  const H=memberHistory(A); const e=A.events.find(x=>x.name===it.name)||{name:it.name,topics:it.topics||'',tag:it.type};
+  const general=A.members.filter(m=>!m.role&&!m.trackerOnly); const came=m=>(H.get(m.netid)||{came:[]}).came.length;
+  const yr={}; general.forEach(m=>{ const y=yr[m.year]||(yr[m.year]={n:0,c:0}); y.n++; if(came(m)) y.c++; }); const rate=y=>yr[y]?yr[y].c/yr[y].n:.3;
+  const rsvpd=new Set(A.rsvpTabs.filter(t=>(S.rsvpMap[t.key]||guessMap(A,t))===it.name).flatMap(t=>t.ids||[]));
+  const rows=general.filter(m=>!rsvpd.has(m.netid)).map(m=>{ const fit=eventFit(e,m), c=came(m); const mi=new Set(m.interests.split(',').map(x=>x.trim())); return {m,fit,c,rate:rate(m.year),shared:topicsOf(e).filter(x=>mi.has(x)),score:fit*rate(m.year)*(1+.7*Math.min(c,3))*(m.inTracker?1:.8)}; }).filter(r=>r.fit>0).sort((a,b)=>b.score-a.score||a.m.name.localeCompare(b.m.name));
+  return {rows,rsvpd:rsvpd.size,yr:Object.fromEntries(Object.entries(yr).map(([k,v])=>[k,v.c/v.n])),e};
+}
+function renderInvite(A){
+  const F=S.fm; const sel=$('#inv-ev'); const items=F.plan; const cur=sel.value; sel.replaceChildren(); items.forEach(it=>sel.append(el('option',{value:it.key},it.name+' · '+fmtD(it.date)))); sel.value=items.some(x=>x.key===cur)?cur:(items[0]?items[0].key:'');
+  const it=items.find(x=>x.key===sel.value); const box=$('#inv'), head=$('#inv-head'); box.replaceChildren(); head.replaceChildren();
+  if(!it){ box.append(el('div',{class:'empty'},'No upcoming events.')); return; }
+  const L=inviteList(A,it), N=+$('#inv-n').value, rows=L.rows.slice(0,N);
+  const room=it.R.cur?it.R.cur[1]-it.P.likely:null;
+  head.append(el('div',{class:'note'+(it.R.fit==='crit'||it.R.fit==='warn'?' warn':'')},`Forecast ${it.P.likely} (range ${it.P.low}–${it.P.high}) with ${L.rsvpd} RSVPs in. `,
+    it.R.cur?(room>0&&it.R.fit!=='warn'?`${it.venue} has room for about ${room} more at the likely count, so invites can grow the crowd.`:`${it.venue} is already tight at the top of the range: invite for fit, not for numbers, or move to ${it.R.rec?it.R.rec[0]:'a bigger room'}.`):'No room booked yet.',
+    topicsOf(L.e).length?` Topics: ${topicsOf(L.e).join(', ')}.`:' No topics on this event, so everyone fits equally and the ranking leans on who tends to come.'));
+  if(!rows.length){ box.append(el('div',{class:'empty'},'Nobody left who fits this event’s topics.')); return; }
+  rows.forEach(r=>{ const x=el('div',{class:'act',style:'grid-template-columns:1fr auto;padding:8px 0'}); const mid=el('div'); mid.append(el('div',{class:'t'},r.m.name),el('div',{class:'d'},`${r.m.year} · ${r.m.major}`));
+    const meta=el('div',{class:'meta'}); r.shared.forEach(t=>meta.append(el('span',{class:'pill gold'},t))); meta.append(el('span',{class:'pill tag'},r.c?`came to ${r.c} event${r.c>1?'s':''}`:'hasn’t come yet'),el('span',{class:'pill tag'},`class of ${r.m.year}: ${Math.round(r.rate*100)}% have come`)); mid.append(meta);
+    x.append(mid,el('div',{class:'ops'},el('button',{class:'btn ghost small',onclick:()=>draftFor('invite',{m:r.m,it,shared:r.shared})},'Draft invite'))); box.append(x); });
+  if(L.rows.length>N) box.append(el('p',{class:'xs muted',style:'margin-top:6px'},`${L.rows.length-N} more members fit this event.`));
+}
+$('#inv-ev').addEventListener('change',()=>renderInvite(agg())); $('#inv-n').addEventListener('change',()=>renderInvite(agg()));
+$('#inv-copy').addEventListener('click',async()=>{ const A=agg(); const it=S.fm.plan.find(x=>x.key===$('#inv-ev').value); if(!it) return; const rows=inviteList(A,it).rows.slice(0,+$('#inv-n').value); try{ await navigator.clipboard.writeText(rows.map(r=>r.m.email).join(', ')); toast(`Copied ${rows.length} emails — paste into BCC`); }catch(e){ toast('Copy blocked by the browser'); } });
+function inviteText(o){ const {m,it,shared}=o; const day=it.date.toLocaleDateString('en-US',{weekday:'long'}); return `Hi ${firstName(m.name)} — ${it.name} is ${day}, ${fmtD(it.date)} at ${fmtHour(it.hour)}${it.venue?' in '+it.venue:''}. ${shared.length?`Since you're into ${shared.slice(0,2).join(' and ').toLowerCase()}, I think you'd get a lot out of it.`:'I think you’d get a lot out of it.'} Would you come? If you can, RSVP so we plan enough food${it.food?'':' and seats'}.\n\nElla`; }
+
 /* ===================== FOLLOW-UPS (per member) ===================== */
 // Per-member history from the check-in form and the RSVP tabs: what each person RSVP'd to, what they
 // came to, and what they RSVP'd to but missed. Exec (VPs, co-presidents, directors) are left out.
@@ -1152,6 +1184,7 @@ async function draftFor(kind,obj){
   const sample=await ensureSample();
   let title,sub,prompt;
   if(kind==='funding'){ title='Funding request'; sub='From the forecast · check the numbers before sending'; prompt=`Write the funding request dBBH's VP Finance can submit to the student organization funding committee for our upcoming events. Use exactly the numbers below and do not invent costs. Format: a 2–3 sentence overview with the total; a short 'How we sized this' paragraph explaining the forecast in plain words; one line per event; a one-line close signed by Ella. Under 260 words.\n\n${fFundingText()}`; }
+  else if(kind==='invite'){ const {m,it,shared}=obj; title='Invite · '+firstName(m.name); sub=`${it.name} · ${fmtD(it.date)}`; prompt=`Write a 50-80 word personal invitation from Ella to dBBH member ${m.name} (class of ${m.year}, ${m.major}, interests: ${m.interests}, wants: ${m.looking}) to ${it.name} on ${it.date.toDateString()} at ${fmtHour(it.hour)}${it.venue?' in '+it.venue:''}. Event topics: ${(A=>{ const e=A.events.find(x=>x.name===it.name); return e&&e.topics||'general'; })(agg())}. Lead with why it fits them (${shared.join(', ')||'their interests'}). Ask them to RSVP. Warm, specific, no exclamation marks, sign as Ella.`; }
   else if(kind==='nudge'){ const m=obj.m, ev=nextEventFor(agg(),m); title='Nudge · '+firstName(m.name); sub=obj.kind==='noshow'?`RSVP'd to ${obj.h.missed.join(', ')} and didn't come`:`Signed up ${fmtD(m.ts)}, hasn't come to anything`; prompt=`Write a 50-80 word personal note from Ella to dBBH member ${m.name} (class of ${m.year}, ${m.major}, interests: ${m.interests}, wants: ${m.looking}). Situation: ${obj.kind==='noshow'?`they RSVP'd to ${obj.h.missed.join(', ')} but didn't come. Don't guilt them; ask lightly if timing or format got in the way.`:`they signed up on ${fmtD(m.ts)} and haven't come to any event yet. Make the first step feel small.`} Invite them to ${ev?`${ev.name} on ${fmtD(ev.date)}${ev.time?' at '+ev.time:''}${ev.venue?' in '+ev.venue:''}`:'the next event'}, tied to one of their interests. Warm, specific, no exclamation marks, sign as Ella.`; }
   else if(kind==='prep'){ title='1:1 prep · '+obj.name.split(' ')[0]; sub=obj.role; prompt=`Prepare a 1:1 agenda for Ella's next meeting with ${obj.name} (${obj.role}). Format: 3-5 agenda items, each with the specific question to ask and the data point behind it; then 'Decisions needed' and 'Follow-ups to confirm'. Keep it under 220 words.`; }
   else if(kind==='checkin'){ title='Check-in to '+obj.name.split(' ')[0]; sub='Short message, dBBH voice'; prompt=`Write a short, warm check-in message (text or email, 80-120 words) from Ella to ${obj.name} (${obj.role}) about their current workstream. Reference one concrete thing they own and one specific ask with a date. No hype.`; }

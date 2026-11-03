@@ -72,7 +72,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @keyframes pulse{50%{opacity:.35}}
 .src .lbl{flex:1;color:var(--ink-2)}
 .src .when{font-variant-numeric:tabular-nums}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font-weight:500;font-size:13px;line-height:1.2}
+.btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:7px 12px;border-radius:8px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font-weight:500;font-size:13px;line-height:1.2}
 .btn:hover{border-color:var(--navy)}
 .btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}
 :root[data-theme="dark"] .btn.primary{color:#0F1A21}
@@ -81,7 +81,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .btn.ghost{border-color:transparent;background:transparent;color:var(--navy-ink)}
 .btn[disabled]{opacity:.5;cursor:default}
 /* main */
-main{padding:28px 36px 60px;max-width:1180px;width:100%}
+main{padding:28px 36px 60px;max-width:1180px;width:100%;min-width:0}
 .view{display:none}.view.on{display:block}
 .vh{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap}
 .vh .sub{color:var(--muted);margin-top:6px;max-width:62ch}
@@ -217,6 +217,32 @@ input.q,select.q{font:inherit;font-size:13px;padding:7px 10px;border:1px solid v
 .note.crit{background:var(--crit-soft)}
 .kbd{font-size:11px;padding:1px 5px;border:1px solid var(--line-2);border-radius:4px;color:var(--muted)}
 .empty{padding:22px;text-align:center;color:var(--muted);font-size:13px}
+/* forecast */
+.fx{display:grid;grid-template-columns:minmax(130px,46%) 1fr 48px;gap:10px;align-items:center;font-size:13px}
+.fx+.fx{margin-top:8px}
+.fx .track{position:relative;height:14px;border-radius:3px;background:var(--paper-2)}
+.fx .track::after{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;border-left:1px solid var(--line-2)}
+.fx .seg{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--good)}
+.fx .seg.neg{background:var(--crit)}
+.fx .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.fx .v.neg{color:var(--crit)}.fx .v.pos{color:var(--good)}
+.fx-h{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+.fx-h:first-child{margin-top:0}
+.sim{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.sim label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sim label.chk{flex-direction:row;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink);align-self:end;padding-bottom:7px}
+.sim .q{width:100%}
+.sim .full{grid-column:1/-1}
+.fc-out{margin-top:16px;padding-top:16px;border-top:1px solid var(--line);display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:20px;align-items:start}
+.fc-big{font-family:"Instrument Serif",serif;font-size:56px;line-height:.9;font-variant-numeric:tabular-nums;color:var(--ink)}
+.fc-big small{display:block;font-family:"DM Sans";font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+.money{display:grid;grid-template-columns:1fr auto;gap:4px 16px;font-size:13px;font-variant-numeric:tabular-nums}
+.money .tot{font-weight:600;border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+.why{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tbl tfoot td{font-weight:600;border-bottom:0}
+.modal form{max-height:calc(100vh - 40px);overflow:auto}
+@media (max-width:1000px){.fc-out{grid-template-columns:1fr 1fr}.fc-out>:first-child{grid-column:1/-1}}
+@media (max-width:760px){.sim,.fc-out{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 <style>[hidden]{display:none!important}img{max-width:100%}</style>
@@ -229,6 +255,7 @@ input.q,select.q{font:inherit;font-size:13px;padding:7px 10px;border:1px solid v
       <button data-v="brief" class="on"><span>Brief</span><span class="cnt hot" id="n-brief">–</span></button>
       <button data-v="members"><span>Members</span><span class="cnt" id="n-members">–</span></button>
       <button data-v="events"><span>Events</span><span class="cnt" id="n-events">–</span></button>
+      <button data-v="forecast"><span>Forecast</span><span class="cnt" id="n-forecast">–</span></button>
       <button data-v="team"><span>Team</span><span class="cnt" id="n-team">–</span></button>
       <button data-v="actions"><span>Actions</span><span class="cnt" id="n-actions">–</span></button>
       <button data-v="ask"><span>Ask</span><span class="cnt">AI</span></button>
@@ -304,6 +331,22 @@ input.q,select.q{font:inherit;font-size:13px;padding:7px 10px;border:1px solid v
         <div class="card"><div class="ch"><h3 id="buddy-title">Buddy Program applications</h3><span class="pill tag" id="buddy-n"></span></div><div id="ch-buddy"></div></div>
         <div class="card"><div class="ch"><h3>Applicants want</h3></div><div id="ch-buddy-want"></div><hr class="sep"><p class="sm dim" id="alumni-note"></p></div>
       </div>
+    </section>
+
+    <!-- FORECAST -->
+    <section class="view" id="v-forecast">
+      <div class="vh"><div><div class="eyebrow">Planning</div><h1>Turnout, rooms and money</h1><p class="sub" id="fc-sub"></p></div>
+        <div class="row"><button class="btn" id="fc-assume">Assumptions</button><button class="btn primary" id="fc-new">+ Plan an event</button></div></div>
+      <div class="grid g4" id="fc-tiles"></div>
+      <div class="card" style="margin-top:16px"><div class="ch"><h3>Upcoming events</h3><span class="xs muted">likely headcount · 80% range · room · request</span></div><div id="fc-list"></div></div>
+      <div class="card" style="margin-top:16px" id="fc-sim-card"><div class="ch"><div><h3>What if…</h3><p class="sm muted" style="margin-top:2px">Pick an event and change the day, start time, food or room. The forecast, room check and budget update as you go.</p></div></div><div id="fc-sim"></div></div>
+      <div class="grid g2" style="margin-top:16px">
+        <div class="card"><div class="ch"><h3>What moves turnout</h3><span class="xs muted" id="fc-n"></span></div><div id="fc-factors"></div></div>
+        <div class="card"><div class="ch"><h3>Typical turnout by event type</h3><span class="xs muted">weekday evening · no food · 300 members</span></div><div id="fc-types"></div><hr class="sep"><p class="sm dim" id="fc-show"></p></div>
+      </div>
+      <div class="card" style="margin-top:16px"><div class="ch"><div><h3>Funding request</h3><p class="sm muted" style="margin-top:2px" id="fc-fund-note"></p></div><div class="row"><button class="btn small" id="fc-copy">Copy table</button><button class="btn small primary" id="fc-draft">Draft the request</button></div></div><div class="tblwrap" id="fc-fund"></div></div>
+      <div class="card" style="margin-top:16px"><div class="ch"><div><h3>Forecast vs. actual</h3><p class="sm muted" style="margin-top:2px" id="fc-back-note"></p></div></div><div class="tblwrap" id="fc-back"></div></div>
+      <p class="xs muted" style="margin-top:14px;max-width:96ch" id="fc-how"></p>
     </section>
 
     <!-- TEAM -->
@@ -508,6 +551,7 @@ function localPrep(p){ const A=agg(); const open=openFor(p); const lines=[`1:1 w
   return lines.join('\n'); }
 function localDraft(kind,obj){
   if(kind==='prep') return localPrep(obj);
+  if(kind==='funding') return fFundingText();
   if(kind==='checkin'){ const open=openFor(obj); return `Hi ${firstName(obj.name)} — quick check-in on ${obj.ws.split('.')[0].toLowerCase()}. ${open[0]?`Where do things stand on "${open[0].title.toLowerCase()}"? If it's on track for ${open[0].due?fmtD(parseISO(open[0].due)):'this week'}, just say so; if not, tell me what you need and I'll clear it.`:'What is the one thing you need from me this week?'} Thanks for carrying this.\n\nElla`; }
   if(kind==='action') return `Hi ${obj.owner||'team'} — one ask: ${obj.title.toLowerCase()}. ${obj.detail} Can you have it done by ${obj.due?fmtD(parseISO(obj.due)):'end of week'}? Reply here if anything's in the way.\n\nElla`;
   if(kind==='intro'){ const a=obj.a,b=obj.b; const shared=[...obj.si,...obj.sl,...obj.sk].join(', ')||'the health economy'; return `${firstName(a.name)}, ${firstName(b.name)} — you two should meet. You're both into ${shared}${obj.sameYear?', and you are the same year':''}. ${firstName(a.name)} is ${a.major}; ${firstName(b.name)} is ${b.major}. Pick a coffee slot this week and let me know how it goes.\n\nElla`; }
@@ -517,6 +561,7 @@ function localAnswer(q){
   const A=agg(); const l=q.toLowerCase(); const open=S.actions.filter(a=>a.status!=='done').sort(sortActions);
   const vp=S.team.find(p=>l.includes(firstName(p.name).toLowerCase()));
   if(vp&&/1:1|1-1|one.on.one|bring|prep/.test(l)) return localPrep(vp);
+  if(S.fm&&/budget|fund|money|request|sofc|\broom|forecast|turnout|how many people/.test(l)) return fAnswer();
   if(/nudge|portal/.test(l)){ const a=open.find(x=>/portal/i.test(x.title))||open[0]; return localDraft('action',a); }
   if(/weakest|weak|gap|thin|demograph|year/.test(l)){ const y=A.year; const total=A.signups; const pct=k=>Math.round(100*(y[k]||0)/total); return `Weakest by class year: 2027 (${y['2027']||0}, ${pct('2027')}%) and 2028 (${y['2028']||0}, ${pct('2028')}%) against 2030 at ${y['2030']||0} (${pct('2030')}%). Weakest by retention: ${A.returning} of ${A.oldRoster} last-year members are back (${Math.round(100*A.returning/Math.max(1,A.oldRoster))}%).\n\nWhat to do: point the corporate coffee chats and the alumni networking session at seniors explicitly (recruiting help is what they want), and send a second touch to the ${A.oldRoster-A.returning} members who haven't re-signed. Both are already on the action list, owned by Sara and Lena.`; }
   if(/update|bullets|exec/.test(l)){ const up=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).sort((a,b)=>a.date-b.date).slice(0,2); return ['Sunday exec update',`• ${A.roster} signed up this year (${A.returning} returning, ${A.newM} new).`,`• Info Session 2: ${attFor(A,'Info Session 2')} checked in on ${rsvpFor(A,'Info Session 2')} RSVPs.`,`• Next up: ${up.map(e=>e.name+' ('+fmtD(e.date)+')').join('; ')}.`,`• ${open.filter(a=>a.p==='now').length} actions need attention now: ${open.filter(a=>a.p==='now').map(a=>a.title.toLowerCase()).join('; ')}.`,`• Buddy Program: ${A.buddy} applications; pairings go out after the deadline.`,`• Ask: every VP confirms their portal sign-up by Sunday night.`].join('\n'); }
@@ -576,7 +621,7 @@ function groupedBars(rows){ // rows: [{k, a:rsvp, b:turnout}]
 function tile(label,big,sub,unit){ const t=el('div',{class:'card tile'}); t.append(el('div',{class:'eyebrow'},label)); const b=el('div',{class:'big'},String(big)); if(unit) b.append(el('small',{},unit)); t.append(b); if(sub) t.append(el('div',{class:'delta',html:sub})); return t; }
 function pillP(p){ return el('span',{class:'pill '+p},el('span',{class:'ic'}),p==='now'?'Now':p==='week'?'This week':p==='done'?'Done':'Soon'); }
 
-function renderAll(){ const A=agg(); renderBrief(A); renderMembers(A); renderEvents(A); renderTeam(A); renderActions(A); renderAsks(); const open=S.actions.filter(a=>a.status!=='done'); $('#n-brief').textContent=open.filter(a=>a.p==='now').length; $('#n-members').textContent=A.roster; $('#n-events').textContent=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).length; $('#n-team').textContent=S.team.length; $('#n-actions').textContent=open.length; }
+function renderAll(){ const A=agg(); S.fm=fModel(A); renderBrief(A); renderMembers(A); renderEvents(A); renderForecast(A); renderTeam(A); renderActions(A); renderAsks(); $('#n-forecast').textContent=S.fm.plan.length;const open=S.actions.filter(a=>a.status!=='done'); $('#n-brief').textContent=open.filter(a=>a.p==='now').length; $('#n-members').textContent=A.roster; $('#n-events').textContent=A.events.filter(e=>e.date&&daysUntil(e.date)>=0).length; $('#n-team').textContent=S.team.length; $('#n-actions').textContent=open.length; }
 
 function renderBrief(A){
   const d=new Date(); $('#today').textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
@@ -604,6 +649,9 @@ function renderBrief(A){
   const y=A.year; const total=A.signups; if((y['2027']||0)+(y['2028']||0)<0.25*total) sig.push(['warn','Upperclassmen are thin',`2027: ${y['2027']||0} · 2028: ${y['2028']||0} · 2029: ${y['2029']||0} · 2030: ${y['2030']||0}.`]);
   if(A.returning/Math.max(1,A.oldRoster)<0.5) sig.push(['warn','Most of last year has not re-signed',`${A.oldRoster-A.returning} of ${A.oldRoster} 2025–26 members are missing from this year's sign-ups.`]);
   const is2=A.events.find(e=>/info session 2/i.test(e.name)); if(is2){ const r=rsvpFor(A,is2.name); sig.push(['good','Info Session 2 RSVPs',`${r} so far. Info Session 1 drew ${is1} on ${rsvpFor(A,'Info Session 1')} RSVPs, so plan for 2–4× the RSVP count.`]); }
+  if(S.fm) for(const it of S.fm.plan){ const P=it.P,R=it.R;
+    if(R.fit==='crit'||R.fit==='warn') sig.push([R.fit,`${esc(it.name)} may outgrow ${esc(it.venue)}`,`Forecast ${P.low}–${P.high} people (likely ${P.likely}); the room holds ${R.cur[1]}.${R.rec&&R.rec!==R.cur?` ${esc(R.rec[0])} (${R.rec[1]}) fits the top of the range.`:''} <button class="btn ghost small" data-go="forecast" style="padding:0 2px">See the forecast →</button>`]);
+    const tc=fTimingCost(it); if(tc) sig.push(['warn',`${esc(it.name)}: the timing costs turnout`,tc]); }
   if(A.fellows===0) sig.push(['good','Fellows tier is empty, by design',`Invites start at 5 points. ${Object.entries(A.points).filter(([p])=>+p>=3).reduce((s,[,n])=>s+n,0)} members are at 3+ already.`]);
   sig.forEach(([c,t,d])=>{ const s=el('div',{class:'sig '+c}); s.append(el('div',{class:'bar'})); const b=el('div'); b.append(el('div',{class:'t'},t),el('div',{class:'d',html:d})); s.append(b); SG.append(s); });
   // week
@@ -712,6 +760,227 @@ $('#add-action').addEventListener('click',()=>addAction({}));
 async function addAction(pre){ const r=await formDialog({title:'New action',fields:[{key:'title',label:'What needs to happen',placeholder:'e.g. Confirm Schiciano B for Sep 17'},{key:'detail',label:'Detail (optional)',type:'textarea'},{key:'owner',label:'Owner',type:'select',options:ownerOptions(),value:pre.owner||'Ella'},{key:'due',label:'Due',type:'date',value:new Date(TODAY.getTime()+7*864e5).toISOString().slice(0,10)},{key:'p',label:'Priority',type:'select',options:PRIO,value:'week'}],submit:'Add action'}); if(!r||!r.title) return; const a={id:'u'+Date.now().toString(36),p:r.p||'week',title:r.title,detail:r.detail||'',owner:r.owner||'',due:r.due||'',src:'Added by you',status:'open',createdAt:new Date().toISOString()}; S.actions.push(a); saveAction(a); renderAll(); toast('Added'); }
 async function editAction(a){ const opts=ownerOptions(); if(a.owner&&!opts.some(o=>o[0]===a.owner)) opts.unshift([a.owner,a.owner]); const r=await formDialog({title:'Edit action',fields:[{key:'title',label:'Title',value:a.title},{key:'detail',label:'Detail',type:'textarea',value:a.detail||''},{key:'owner',label:'Owner',type:'select',options:opts,value:a.owner||''},{key:'due',label:'Due',type:'date',value:a.due||''},{key:'p',label:'Priority',type:'select',options:PRIO,value:a.p},{key:'note',label:'Your note',type:'textarea',value:a.note||''}]}); if(!r) return; a.title=r.title||a.title; a.detail=r.detail; a.owner=r.owner; a.due=r.due; a.p=r.p||a.p; a.note=r.note; saveAction(a); renderAll(); toast('Saved'); }
 
+/* ===================== FORECAST: turnout, rooms, money ===================== */
+// A small model you can explain: turnout = typical turnout for the event type, scaled to the roster,
+// times multipliers learned from past events for the day, start time, free food and point in the
+// semester. It's fitted on a log scale and pulled toward "no effect" because the history is small.
+// Once RSVPs come in they are blended in using each type's usual show-up rate.
+// In this demo the past events are fictional and were generated with known patterns, so the model
+// is rediscovering them; with dBBH's real event log it learns the real ones.
+const FTYPES=['GBM','Corporate','Alumni','Speaker','Workshop','Social'];
+const FTYPE_LABEL={GBM:'GBM / info session',Corporate:'Corporate / career',Alumni:'Alumni & industry',Speaker:'Speaker or panel',Workshop:'Workshop',Social:'Social'};
+const FACTORS=['type','day','time','food','phase'];
+const FREF={day:'Mon–Thu',time:'evening',food:'no',phase:'regular'};
+const FLEVEL={time:{morning:'Starts before noon',afternoon:'Starts noon–5pm',evening:'Starts 5pm or later'},day:{'Mon–Thu':'Monday–Thursday',Fri:'Friday',Sat:'Saturday',Sun:'Sunday'},food:{yes:'Free food',no:'No food'},phase:{early:'First 4 weeks of semester',regular:'Mid-semester',exams:'Midterm or finals weeks'}};
+const FREF_LABEL={time:'vs. an evening start',day:'vs. Monday–Thursday',food:'vs. no food',phase:'vs. mid-semester'};
+const fDefaults=()=>({food:null,cont:10,fixed:{GBM:60,Corporate:120,Alumni:80,Speaker:100,Workshop:40,Social:50},
+  rooms:[['Bryan Center Meeting Room',40],['Schiciano B',60],['Trent Semans 6th Floor',70],['Old Chem 116',120],['Schiciano Auditorium',180]]});
+S.fplan={over:{},added:[]}; S.fcfg=fDefaults(); S.fsim=null; S.fm=null;
+const addDays=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+const isoD=d=>{ const z=x=>String(x).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; };
+const dow0=d=>(d.getDay()+6)%7; // 0 = Monday
+const DOW=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const SEM0=(()=>{ const d=rel(-20); return addDays(d,-dow0(d)); })(); // Monday of the semester's first week
+const dayB=w=>w<=3?'Mon–Thu':['Fri','Sat','Sun'][w-4];
+const timeB=h=>h<12?'morning':h<17?'afternoon':'evening';
+const phaseW=wk=>wk<4?'early':(wk>=6&&wk<9)||wk>=14?'exams':'regular';
+const phaseOf=d=>{ const n=Math.round((d-SEM0)/864e5); return phaseW(Math.floor((((n%140)+140)%140)/7)); };
+const fLv=(type,date,hour,food)=>({type,day:dayB(dow0(date)),time:timeB(hour),food:food?'yes':'no',phase:phaseOf(date)});
+const med=a=>{ const b=a.filter(x=>isFinite(x)).sort((x,y)=>x-y); if(!b.length) return NaN; const m=b.length>>1; return b.length%2?b[m]:(b[m-1]+b[m])/2; };
+const usd=n=>'$'+Math.round(n).toLocaleString('en-US');
+const pct=x=>(x>=0?'+':'−')+Math.abs(Math.round(x*100))+'%';
+function startHour(t){ const m=String(t||'').match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?\s*[-–]\s*(\d{1,2})(?::\d{2})?\s*(AM|PM)/i); if(!m) return 18; let h=+m[1]+(m[2]?+m[2]/60:0); const pm=m[3]?m[3].toUpperCase()==='PM':(m[5].toUpperCase()==='PM'&&!(+m[1]>+m[4]&&+m[1]!==12)); if(pm&&h<12) h+=12; return h; }
+function fmtHour(h){ const H=Math.floor(h), M=Math.round((h-H)*60); return (((H+11)%12)+1)+':'+String(M).padStart(2,'0')+' '+(H>=12?'PM':'AM'); }
+const tagType=t=>/gbm|info/i.test(t)?'GBM':/corporate|career/i.test(t)?'Corporate':/alumni/i.test(t)?'Alumni':/social/i.test(t)?'Social':/workshop/i.test(t)?'Workshop':'Speaker';
+
+function fHistory(A){
+  const rnd=mulberry32(DEMO_SEED+101); const gauss=()=>{ let u=0; while(!u) u=rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*rnd()); };
+  // The patterns this fictional history was generated with. The model never reads these; it has to find them.
+  const T={base:{GBM:105,Corporate:52,Alumni:34,Speaker:58,Workshop:28,Social:66},day:{'Mon–Thu':1,Fri:.7,Sat:.6,Sun:.85},time:{morning:.62,afternoon:.84,evening:1},food:{yes:1.22,no:1},phase:{early:1.25,regular:1,exams:.72},show:{GBM:2.4,Corporate:.74,Alumni:.8,Speaker:.7,Workshop:.66,Social:.9}};
+  const F25=addDays(SEM0,-364), S26=addDays(F25,140);
+  const L=[ // name, type, semester, week, weekday (0=Mon), start hour, food, venue
+    ['Info Session 1','GBM','F',1,1,18,1,'Old Chem 116'],['Info Session 2','GBM','F',2,2,19,1,'Schiciano Auditorium'],
+    ['Consulting Case Workshop','Workshop','F',3,3,18,0,'Bryan Center Meeting Room'],['Career Night: Paths in Health','Corporate','F',3,1,19,1,'Schiciano B'],
+    ['Biotech Founders Panel','Speaker','F',5,2,18,1,'Old Chem 116'],['Alumni Coffee Hour','Alumni','F',5,5,10,0,'Trent Semans 6th Floor'],
+    ['Fall Social: Trivia Night','Social','F',6,4,20,1,'Bryan Center Meeting Room'],['Midterm Check-in GBM','GBM','F',7,2,19,0,'Old Chem 116'],
+    ['Med Device Speaker Night','Speaker','F',9,0,18,0,'Schiciano B'],['Alumni & Industry Mixer','Alumni','F',10,3,18,1,'Trent Semans 6th Floor'],
+    ['Resume & LinkedIn Workshop','Workshop','F',11,1,13,0,'Bryan Center Meeting Room'],['Healthcare VC Panel','Speaker','F',12,4,16,0,'Old Chem 116'],
+    ['End-of-Semester Social','Social','F',14,6,15,1,'Bryan Center Meeting Room'],
+    ['Spring Kickoff GBM','GBM','S',1,2,19,1,'Schiciano Auditorium'],['Spring Info Session','GBM','S',2,1,18,1,'Old Chem 116'],
+    ['Corporate Coffee Chats','Corporate','S',3,3,17,0,'Schiciano B'],['Policy Speaker: Drug Pricing','Speaker','S',4,0,18,1,'Old Chem 116'],
+    ['Alumni Career Breakfast','Alumni','S',5,6,9,1,'Trent Semans 6th Floor'],['Excel for Health Finance','Workshop','S',6,2,19,1,'Bryan Center Meeting Room'],
+    ['Spring Career Night','Corporate','S',9,1,19,1,'Schiciano B'],['Startup Pitch Night','Speaker','S',10,3,19,1,'Schiciano Auditorium'],
+    ['Spring Social: Picnic','Social','S',11,5,13,1,'East Campus Lawn'],['Alumni Fireside Chat','Alumni','S',12,2,18,0,'Trent Semans 6th Floor'],
+    ['Case Competition Workshop','Workshop','S',13,4,17,0,'Bryan Center Meeting Room'],['Senior Send-off','Social','S',15,3,19,1,'Bryan Center Meeting Room']
+  ];
+  const rows=L.map(([name,type,sem,wk,dw,hour,food,venue])=>{
+    const date=addDays(sem==='F'?F25:S26,wk*7+dw); const lv={type,day:dayB(dw),time:timeB(hour),food:food?'yes':'no',phase:phaseW(wk)}; const roster=A.oldRoster;
+    const mean=T.base[type]*T.day[lv.day]*T.time[lv.time]*T.food[lv.food]*T.phase[lv.phase]*roster/300;
+    const turnout=Math.max(6,Math.round(mean*Math.exp(.17*gauss()))); const rsvps=Math.max(3,Math.round(turnout/(T.show[type]*Math.exp(.12*gauss()))));
+    const spend=food?Math.round(turnout*1.1*(9+rnd()*4.5)):0;
+    return {name,type,date,hour,food:!!food,venue,season:sem==='F'?'Fall 2025':'Spring 2026',roster,turnout,rsvps,spend,lv};
+  });
+  for(const name of ['Info Session 1','Info Session 2']){ const e=A.events.find(x=>x.name===name); const t=attFor(A,name); if(!e||!t) continue; const h=startHour(e.time); rows.push({name,type:'GBM',date:e.date,hour:h,food:true,venue:e.venue,season:'Fall 2026',roster:A.roster,turnout:t,rsvps:rsvpFor(A,name),spend:0,lv:fLv('GBM',e.date,h,true)}); }
+  return rows.sort((a,b)=>b.date-a.date);
+}
+
+function fFit(rows){
+  const n=rows.length, y=rows.map(r=>Math.log(r.turnout*300/r.roster)); let mu=y.reduce((s,v)=>s+v,0)/n; const eff={}; FACTORS.forEach(f=>eff[f]={});
+  const pred=(r,skip)=>{ let p=mu; for(const g of FACTORS) if(g!==skip) p+=eff[g][r.lv[g]]||0; return p; };
+  for(let it=0;it<40;it++){
+    for(const f of FACTORS){ const sum={},cnt={}; rows.forEach((r,i)=>{ const L=r.lv[f]; sum[L]=(sum[L]||0)+y[i]-pred(r,f); cnt[L]=(cnt[L]||0)+1; }); const lam=f==='type'?.5:2; eff[f]={}; for(const L in sum) eff[f][L]=sum[L]/(cnt[L]+lam); }
+    let s=0; rows.forEach((r,i)=>{ s+=y[i]-(pred(r,null)-mu); }); mu=s/n;
+  }
+  let ss=0; rows.forEach((r,i)=>{ const e=y[i]-pred(r,null); ss+=e*e; }); const sigma=Math.min(.6,Math.max(.15,Math.sqrt(ss/Math.max(4,n-12))));
+  const allShow=med(rows.filter(r=>r.rsvps).map(r=>r.turnout/r.rsvps)); const show={};
+  for(const t of FTYPES){ const v=rows.filter(r=>r.type===t&&r.rsvps).map(r=>r.turnout/r.rsvps); show[t]=v.length>=2?med(v):allShow; }
+  const fph=med(rows.filter(r=>r.spend).map(r=>r.spend/r.turnout));
+  return {mu,eff,sigma,show,n,foodPerHead:isFinite(fph)?fph:11};
+}
+function fPredict(M,ev,roster){
+  const lv=ev.lv||fLv(ev.type,ev.date,ev.hour,ev.food); let lp=M.mu+Math.log(roster/300); for(const g of FACTORS) lp+=M.eff[g][lv[g]]||0;
+  const planLikely=Math.exp(lp); let sig=M.sigma, w=0;
+  if(ev.rsvps>0&&ev.date){ const d=Math.max(0,daysUntil(ev.date)); const done=Math.min(1,Math.max(.5,1-d/28)); w=Math.min(.8,Math.max(.3,.8-d/20)); lp=(1-w)*lp+w*Math.log(ev.rsvps*(M.show[lv.type]||1)/done); sig*=1-.35*w; }
+  const z=1.2816; return {likely:Math.round(Math.exp(lp)),low:Math.max(1,Math.round(Math.exp(lp-z*sig))),high:Math.round(Math.exp(lp+z*sig)),planLikely,lv,w};
+}
+function fRoom(P,venue){ const rooms=S.fcfg.rooms; const cur=venue?rooms.find(r=>normName(r[0])===normName(venue)):null; const fits=rooms.filter(r=>r[1]>=P.high).sort((a,b)=>a[1]-b[1]); const rec=fits[0]||[...rooms].sort((a,b)=>b[1]-a[1])[0]; let fit=null; if(cur){ const c=cur[1]; fit=c<P.likely?'crit':c<P.high?'warn':c>2.5*P.high?'big':'ok'; } return {cur,rec,fit}; }
+function fBudget(M,P,ev){ const c=S.fcfg; const ph=c.food??M.foodPerHead; const food=ev.food?Math.round(P.high*ph):0; const fixed=c.fixed[ev.type]||0; const cont=Math.round((food+fixed)*c.cont/100); return {food,fixed,cont,total:Math.ceil((food+fixed+cont)/5)*5,ph,orderFor:Math.round(P.likely*1.1)}; }
+function fPlan(A){
+  const items=[];
+  for(const e of A.events){ if(!e.date||daysUntil(e.date)<0||/deadline/i.test(e.tag)) continue; const key='ev:'+e.name; const type=tagType(e.tag);
+    const base={key,name:e.name,real:true,date:e.date,hour:startHour(e.time),type,food:type!=='Workshop',venue:e.venue||'',rsvps:rsvpFor(A,e.name)};
+    const o=S.fplan.over[key]; items.push(o?{...base,...o,date:parseISO(o.date)||base.date,rsvps:base.rsvps,edited:true}:base); }
+  for(const p of S.fplan.added){ const d=parseISO(p.date); if(d) items.push({...p,date:d,hour:+p.hour,rsvps:+p.rsvps||0,real:false}); }
+  return items.sort((a,b)=>a.date-b.date);
+}
+function fModel(A){
+  const hist=fHistory(A), M=fFit(hist);
+  const back=hist.map((r,i)=>{ const P=fPredict(fFit(hist.filter((_,j)=>j!==i)),{lv:r.lv},r.roster); return {...r,P,ok:r.turnout>=P.low&&r.turnout<=P.high}; });
+  const plan=fPlan(A).map(it=>{ const P=fPredict(M,it,A.roster); return {...it,P,R:fRoom(P,it.venue),B:fBudget(M,P,it)}; });
+  return {hist,M,back,plan,roster:A.roster};
+}
+const fEff=(M,f,L)=>Math.exp((M.eff[f][L]||0)-(M.eff[f][FREF[f]]||0))-1;
+function fWhy(M,lv){ return ['time','day','food','phase'].filter(f=>lv[f]!==FREF[f]).map(f=>[FLEVEL[f][lv[f]],fEff(M,f,lv[f])]).filter(([,e])=>Math.abs(e)>=.03); }
+function fTimingCost(it){ const M=S.fm.M, lv=it.P.lv; const parts=['day','time'].filter(f=>lv[f]!==FREF[f]); if(!parts.length) return ''; const mult=parts.reduce((m,f)=>m*(1+fEff(M,f,lv[f])),1); if(mult>.8) return '';
+  return `${DOW[dow0(it.date)]} ${fmtHour(it.hour)} start: past events at this kind of time drew about ${Math.round((1-mult)*100)}% fewer people. The same event on a weekday evening would forecast about ${Math.round(it.P.planLikely/mult)}.`; }
+
+function fFundRows(){ return S.fm.plan.map(it=>({it,cells:[it.name,fmtD(it.date),String(it.P.high),it.venue||'TBD',usd(it.B.food),usd(it.B.fixed),usd(it.B.cont),usd(it.B.total)]})); }
+function fFundingText(){ const F=S.fm, c=S.fcfg; const tot=F.plan.reduce((s,x)=>s+x.B.total,0);
+  return [`Funding request · dBBH upcoming events`,`Total requested: ${usd(tot)} for ${F.plan.length} event${F.plan.length===1?'':'s'}.`,'',
+    `How we sized it: headcounts come from a forecast built on ${F.M.n} past dBBH events (turnout by event type, day, start time, free food and point in the semester, updated with RSVPs as they arrive). We budget for the top of each forecast's 80% range so we don't come up short, food at ${usd(c.food??F.M.foodPerHead)} per attendee${c.food==null?' (last year\'s catering receipts)':''}, plus ${c.cont}% contingency. In past events, ${F.back.filter(b=>b.ok).length} of ${F.back.length} turnouts landed inside the forecast range.`,'',
+    ...F.plan.map(it=>`• ${it.name}: ${DOW[dow0(it.date)]} ${fmtD(it.date)}, ${fmtHour(it.hour)}, ${it.venue||'room TBD'}. Expected ${it.P.likely} (range ${it.P.low}–${it.P.high}); budgeting for ${it.P.high}. Food ${usd(it.B.food)}, supplies & fixed ${usd(it.B.fixed)}, contingency ${usd(it.B.cont)} → ${usd(it.B.total)}.`),
+    '','Ella Etchandy, Co-President'].join('\n'); }
+function fContext(){ const F=S.fm; return F.plan.map(it=>`${it.name} (${fmtD(it.date)} ${fmtHour(it.hour)}, ${FTYPE_LABEL[it.type]}, ${it.food?'food':'no food'}): likely ${it.P.likely}, 80% range ${it.P.low}–${it.P.high}; room ${it.venue||'TBD'}${it.R.cur?' holds '+it.R.cur[1]+' ('+({crit:'too small',warn:'tight',big:'much bigger than needed',ok:'fits'})[it.R.fit]+')':''}; request ${usd(it.B.total)}.`).join('\n')+`\nTotal request ${usd(F.plan.reduce((s,x)=>s+x.B.total,0))}. Model: ${F.M.n} past events; ${F.back.filter(b=>b.ok).length}/${F.back.length} past turnouts inside the range. Learned effects: ${['time','day','food','phase'].flatMap(f=>Object.keys(F.M.eff[f]).filter(L=>L!==FREF[f]).map(L=>FLEVEL[f][L]+' '+pct(fEff(F.M,f,L)))).join(', ')}.`; }
+function fAnswer(){ const F=S.fm; const tot=F.plan.reduce((s,x)=>s+x.B.total,0);
+  return [`Request ${usd(tot)} for the next ${F.plan.length} event${F.plan.length===1?'':'s'}: food, supplies and ${S.fcfg.cont}% contingency, sized to the top of each forecast range.`,
+    ...F.plan.map(it=>`• ${it.name} (${fmtD(it.date)}): likely ${it.P.likely}, range ${it.P.low}–${it.P.high}. ${it.R.cur?`${it.venue} holds ${it.R.cur[1]}: ${({crit:'too small',warn:'tight',big:'much bigger than needed',ok:'fits'})[it.R.fit]}${(it.R.fit==='crit'||it.R.fit==='warn')&&it.R.rec?`, ${it.R.rec[0]} (${it.R.rec[1]}) fits`:''}.`:`No room set; ${it.R.rec[0]} (${it.R.rec[1]}) fits.`} Request ${usd(it.B.total)}.`),
+    `The forecast learns from ${F.M.n} past events; ${F.back.filter(b=>b.ok).length} of ${F.back.length} past turnouts landed inside its range. Open the Forecast tab to try other days, times or rooms.`].join('\n'); }
+
+function renderForecast(A){
+  const F=S.fm; if(!F) return; const {M,plan,back}=F;
+  const total=plan.reduce((s,it)=>s+it.B.total,0), within=back.filter(b=>b.ok).length, miss=med(back.map(b=>Math.abs(b.P.likely-b.turnout)/b.turnout));
+  const flagged=plan.filter(it=>it.R.fit==='crit'||it.R.fit==='warn'), big=[...plan].sort((a,b)=>b.P.likely-a.P.likely)[0];
+  $('#fc-sub').textContent=`Forecasts learn from ${M.n} past dBBH events. Each one gives a likely headcount and a range that 8 in 10 events land inside. Rooms are checked and money requested for the top of that range, so you don't come up short.`;
+  $('#fc-tiles').replaceChildren(
+    tile('Funding to request',usd(total),`across ${plan.length} upcoming event${plan.length===1?'':'s'}`),
+    big?tile('Biggest event',big.P.likely,`${esc(big.name)} · range ${big.P.low}–${big.P.high}`,'likely'):tile('Biggest event','—',''),
+    tile('Rooms to check',flagged.length,flagged.length?`<span style="color:var(--crit)">${flagged.map(x=>esc(x.name)).join(', ')}</span>`:'every booked room fits the forecast'),
+    tile('Forecast accuracy',`${within}/${back.length}`,`past events inside the range · typical miss ${Math.round(miss*100)}%`)
+  );
+  // upcoming list
+  const L=$('#fc-list'); L.replaceChildren(); if(!plan.length) L.append(el('div',{class:'empty'},'No upcoming events. Use “+ Plan an event” to forecast one.'));
+  const roomPill=it=>{ const R=it.R; if(!R.cur) return el('span',{class:'pill soon'},it.venue?'capacity unknown':'no room yet'); return el('span',{class:'pill '+({crit:'now',warn:'week',ok:'done',big:'soon'})[R.fit]},({crit:'room too small',warn:'room is tight',ok:'room fits',big:'room much bigger than needed'})[R.fit]); };
+  for(const it of plan){ const r=el('div',{class:'ev'});
+    r.append(el('div',{class:'date'},String(it.date.getDate()),el('small',{},it.date.toLocaleDateString('en-US',{month:'short'}))));
+    const mid=el('div'); mid.append(el('div',{class:'t'},it.name,' ',el('span',{class:'pill tag'},FTYPE_LABEL[it.type]),it.real?null:el('span',{class:'pill gold',style:'margin-left:4px'},'planned'),it.edited?el('span',{class:'pill soon',style:'margin-left:4px'},'what-if saved'):null));
+    mid.append(el('div',{class:'m'},[DOW[dow0(it.date)]+' '+fmtHour(it.hour),it.venue||'room TBD',it.food?'food':'no food',it.rsvps?it.rsvps+' RSVPs so far':'no RSVPs yet'].join(' · ')));
+    const rl=el('div',{class:'meta row wrap',style:'margin-top:6px;gap:6px'}); rl.append(roomPill(it)); if(it.R.cur) rl.append(el('span',{class:'xs muted'},`holds ${it.R.cur[1]}`)); if(it.R.rec&&(it.R.fit==='crit'||it.R.fit==='warn'||it.R.fit==='big'||!it.R.cur)) rl.append(el('span',{class:'xs dim'},`Suggest ${it.R.rec[0]} (${it.R.rec[1]})`)); mid.append(rl);
+    const tc=fTimingCost(it); if(tc) mid.append(el('div',{class:'xs',style:'color:var(--warn);margin-top:4px;max-width:70ch'},tc));
+    r.append(mid);
+    const n=el('div',{class:'n'}); n.append(el('b',{},String(it.P.likely)),`likely · ${it.P.low}–${it.P.high}`,el('div',{style:'margin-top:4px;color:var(--ink);font-weight:600'},usd(it.B.total)),el('button',{class:'btn ghost small',style:'margin-top:4px',onclick:()=>{ fSimOpen(it.key); $('#fc-sim-card').scrollIntoView({behavior:'smooth',block:'start'}); }},'What if →')); r.append(n);
+    L.append(r); }
+  // simulator
+  if(!S.fsim||(S.fsim.key&&!plan.some(x=>x.key===S.fsim.key))) fSimOpen(plan[0]?plan[0].key:''); else renderSim();
+  // what moves turnout
+  $('#fc-n').textContent=`learned from ${M.n} past events`;
+  const FX=$('#fc-factors'); FX.replaceChildren();
+  for(const f of ['time','day','food','phase']){ const lv=Object.keys(FLEVEL[f]).filter(L=>L!==FREF[f]&&L in M.eff[f]); if(!lv.length) continue; FX.append(el('div',{class:'fx-h'},FREF_LABEL[f]));
+    for(const L of lv){ const e=fEff(M,f,L), w=Math.min(50,Math.abs(e)/.6*50); const row=el('div',{class:'fx'}); row.append(el('div',{},FLEVEL[f][L])); const tr=el('div',{class:'track'}); tr.append(el('div',{class:'seg'+(e<0?' neg':''),style:e<0?`left:${50-w}%;width:${w}%`:`left:50%;width:${w}%`})); row.append(tr,el('div',{class:'v '+(e<0?'neg':'pos')},pct(e))); FX.append(row); } }
+  $('#fc-types').replaceChildren(hbars(FTYPES.filter(t=>t in M.eff.type).map(t=>[FTYPE_LABEL[t],Math.round(Math.exp(M.mu+(M.eff.type[t]||0)))]),0,{}));
+  $('#fc-show').innerHTML='People who show up per RSVP: '+FTYPES.filter(t=>t in M.eff.type).map(t=>`${esc(FTYPE_LABEL[t])} <b>${M.show[t].toFixed(2)}×</b>`).join(' · ')+'. GBMs draw far more walk-ins than RSVPs; career and workshop RSVPs over-promise.';
+  // funding table
+  const c=S.fcfg; $('#fc-fund-note').textContent=`Budgets for the top of each range. Food at ${usd(c.food??M.foodPerHead)} per attendee${c.food==null?' (last year\'s receipts)':''}, ${c.cont}% contingency. Order food for the likely count plus 10%.`;
+  const FT=$('#fc-fund'); const tb=el('table',{class:'tbl'}); tb.append(el('thead',{html:'<tr><th>Event</th><th>Date</th><th class="num">Plan for</th><th>Room</th><th class="num">Food</th><th class="num">Supplies &amp; fixed</th><th class="num">Contingency</th><th class="num">Request</th></tr>'}));
+  const body=el('tbody'); fFundRows().forEach(({it,cells})=>{ const tr=el('tr'); cells.forEach((v,i)=>tr.append(el('td',{class:i>=4||i===2?'num':''},v))); tr.children[2].title=`likely ${it.P.likely}; order food for about ${it.B.orderFor}`; body.append(tr); }); tb.append(body);
+  tb.append(el('tfoot',{html:`<tr><td colspan="7">Total</td><td class="num">${usd(total)}</td></tr>`})); FT.replaceChildren(plan.length?tb:el('div',{class:'empty'},'Nothing to fund yet.'));
+  // backtest
+  $('#fc-back-note').textContent=`Each past event was forecast without seeing its own result. ${within} of ${back.length} landed inside the range (the target is about 8 in 10); the typical miss was ${Math.round(miss*100)}% of the actual headcount.`;
+  const bt=el('table',{class:'tbl'}); bt.append(el('thead',{html:'<tr><th>Date</th><th>Event</th><th>Type</th><th class="num">Forecast</th><th class="num">Actual</th><th></th></tr>'}));
+  const bb=el('tbody'); back.forEach(b=>{ const tr=el('tr'); const v=b.ok?el('span',{class:'pill done'},'in range'):el('span',{class:'pill week'},b.turnout>b.P.high?'bigger than forecast':'smaller than forecast');
+    tr.append(el('td',{class:'mono'},fmtD(b.date)+(b.season==='Fall 2026'?'':' ’'+String(b.date.getFullYear()).slice(2))),el('td',{},b.name),el('td',{class:'sm dim'},FTYPE_LABEL[b.type]),el('td',{class:'num'},`${b.P.likely} `,el('span',{class:'xs muted'},`(${b.P.low}–${b.P.high})`)),el('td',{class:'num'},String(b.turnout)),el('td',{},v)); bb.append(tr); });
+  bt.append(bb); $('#fc-back').replaceChildren(bt);
+  $('#fc-how').textContent=`How this works: turnout = the typical turnout for that type of event, scaled to this year's roster (${F.roster} vs. ${A.oldRoster} last year), times what the history says about the day, start time, free food and point in the semester. With so few events per type, each effect is pulled toward “no effect” unless the data clearly shows one. Once RSVPs come in they're blended in using each type's show-up rate, more heavily as the event gets close. Demo note: the past events here are fictional and were generated with planted patterns, so the forecast is rediscovering them. With dBBH's real event log (date, start time, food, RSVPs, check-ins and receipts) it learns the real ones. Room capacities are placeholders; set the real ones under Assumptions.`;
+}
+
+function fSimOpen(key){ const it=S.fm.plan.find(x=>x.key===key);
+  S.fsim=it?{key:it.key,real:it.real,edited:!!it.edited,name:it.name,type:it.type,date:isoD(it.date),hour:it.hour,food:it.food,venue:it.venue,rsvps:it.rsvps}
+           :{key:'',real:false,name:'New event',type:'Speaker',date:relISO(21),hour:18,food:true,venue:'',rsvps:0};
+  renderSim(); }
+function renderSim(){
+  const s=S.fsim, box=$('#fc-sim'); box.replaceChildren(); const form=el('div',{class:'sim'});
+  const fld=(label,input,cls)=>{ const l=el('label',{class:cls||''},label); l.append(input); form.append(l); return input; };
+  const pick=el('select',{class:'q'}); S.fm.plan.forEach(it=>pick.append(el('option',{value:it.key},it.name+' · '+fmtD(it.date)))); pick.append(el('option',{value:''},'+ A new event')); pick.value=s.key; pick.onchange=()=>fSimOpen(pick.value); fld('Event',pick,'full');
+  const name=fld('Name',el('input',{class:'q',value:s.name})); if(s.real) name.disabled=true;
+  const type=el('select',{class:'q'}); FTYPES.forEach(t=>type.append(el('option',{value:t},FTYPE_LABEL[t]))); type.value=s.type; fld('Type',type);
+  const date=fld('Date',el('input',{class:'q',type:'date',value:s.date}));
+  const hour=el('select',{class:'q'}); for(let h=8;h<=21.5;h+=.5) hour.append(el('option',{value:String(h)},fmtHour(h))); if(![...hour.options].some(o=>+o.value===+s.hour)) hour.append(el('option',{value:String(s.hour)},fmtHour(s.hour))); hour.value=String(s.hour); fld('Start time',hour);
+  const room=el('select',{class:'q'}); room.append(el('option',{value:''},'No room yet')); S.fcfg.rooms.forEach(r=>room.append(el('option',{value:r[0]},`${r[0]} · holds ${r[1]}`))); if(s.venue&&!S.fcfg.rooms.some(r=>normName(r[0])===normName(s.venue))) room.append(el('option',{value:s.venue},s.venue+' · capacity unknown')); room.value=s.venue; fld('Room',room);
+  const rsvps=fld('RSVPs so far',el('input',{class:'q',type:'number',min:'0',value:String(s.rsvps||0)})); if(s.real) rsvps.disabled=true;
+  const food=el('input',{type:'checkbox'}); food.checked=!!s.food; fld('Free food',food,'chk');
+  const out=el('div',{id:'fc-out'});
+  const btns=el('div',{class:'row wrap',style:'margin-top:14px'});
+  btns.append(el('button',{class:'btn primary small',onclick:fSimSave},s.key?'Save to plan':'Add to plan'));
+  if(s.key&&!s.real) btns.append(el('button',{class:'btn small',onclick:()=>{ S.fplan.added=S.fplan.added.filter(p=>p.key!==s.key); saveConfig('fplan',S.fplan); S.fsim=null; renderAll(); toast('Removed from the plan'); }},'Remove from plan'));
+  if(s.real&&s.edited) btns.append(el('button',{class:'btn small',onclick:()=>{ delete S.fplan.over[s.key]; saveConfig('fplan',S.fplan); const k=s.key; renderAll(); fSimOpen(k); toast('Back to the original plan'); }},'Undo saved what-if'));
+  btns.append(el('span',{class:'xs muted'},s.real?'Saving updates this event’s forecast, room check and funding line. The event itself isn’t changed.':'Planned events are added to the funding request.'));
+  box.append(form,out,btns);
+  const upd=()=>{ s.name=name.value.trim()||'New event'; s.type=type.value; s.date=date.value||s.date; s.hour=+hour.value; s.venue=room.value; s.rsvps=Math.max(0,+rsvps.value||0); s.food=food.checked; fSimOut(); };
+  [name,type,date,hour,room,rsvps,food].forEach(i=>i.addEventListener('input',upd)); [type,date,hour,room,food].forEach(i=>i.addEventListener('change',upd));
+  fSimOut();
+}
+function fSimOut(){
+  const s=S.fsim, M=S.fm.M, d=parseISO(s.date)||rel(21); const ev={type:s.type,date:d,hour:+s.hour,food:s.food,rsvps:+s.rsvps||0};
+  const P=fPredict(M,ev,S.fm.roster), R=fRoom(P,s.venue), B=fBudget(M,P,ev); const was=S.fm.plan.find(x=>x.key===s.key);
+  const o=$('#fc-out'); o.className='fc-out'; o.replaceChildren();
+  const c1=el('div'); const delta=was&&was.P.likely!==P.likely?` · ${P.likely>was.P.likely?'+':'−'}${Math.abs(P.likely-was.P.likely)} vs. saved plan`:'';
+  c1.append(el('div',{class:'eyebrow'},'Forecast'),el('div',{class:'fc-big'},String(P.likely),el('small',{},`likely · 8 in 10 land between ${P.low} and ${P.high}${delta}`)));
+  const why=el('div',{class:'why'}); why.append(el('span',{class:'pill tag'},`${FTYPE_LABEL[s.type]}: ~${Math.round(Math.exp(M.mu+(M.eff.type[s.type]||0))*S.fm.roster/300)} on a weekday evening`)); fWhy(M,P.lv).forEach(([t,e])=>why.append(el('span',{class:'pill '+(e<0?'now':'done')},`${t} ${pct(e)}`))); if(P.w) why.append(el('span',{class:'pill soon'},`${ev.rsvps} RSVPs × ${M.show[s.type].toFixed(2)} show-up, weighted ${Math.round(P.w*100)}%`)); c1.append(why);
+  const c2=el('div'); c2.append(el('div',{class:'eyebrow'},'Room'));
+  if(R.cur){ const v={crit:['crit','Too small: the likely crowd won’t fit.'],warn:['warn','Tight: fits the likely crowd, not the top of the range.'],ok:['','Fits the whole range.'],big:['','Fits, but it’s much bigger than needed. A smaller room will feel fuller.']}[R.fit]; c2.append(el('div',{class:'note '+v[0],style:'margin-top:6px'},el('b',{},`${R.cur[0]} holds ${R.cur[1]}. `),v[1])); }
+  else c2.append(el('p',{class:'sm dim',style:'margin-top:6px'},s.venue?`${s.venue}: capacity unknown. Add it under Assumptions.`:'No room picked yet.'));
+  if(R.rec&&R.rec!==R.cur&&R.fit!=='ok') c2.append(el('p',{class:'sm',style:'margin-top:8px'},`Smallest room that fits ${P.high}: `,el('b',{},`${R.rec[0]} (${R.rec[1]})`),R.rec[1]<P.high?' — still short; consider two sessions or a bigger venue.':''));
+  const c3=el('div'); c3.append(el('div',{class:'eyebrow'},'Budget'));
+  const m=el('div',{class:'money',style:'margin-top:6px'}); const line=(k,v,cls)=>{ m.append(el('div',{class:cls||''},k),el('div',{class:cls||''},v)); };
+  line(ev.food?`Food · ${P.high} × ${usd(B.ph)}`:'Food · none',usd(B.food)); line('Supplies & fixed',usd(B.fixed)); line(`Contingency ${S.fcfg.cont}%`,usd(B.cont)); line('Request',usd(B.total),'tot');
+  c3.append(m); if(ev.food) c3.append(el('p',{class:'xs muted',style:'margin-top:6px'},`Order food for about ${B.orderFor}; the extra covers a bigger crowd.`));
+  o.append(c1,c2,c3);
+}
+function fSimSave(){ const s=S.fsim; const rec={type:s.type,date:s.date,hour:s.hour,food:s.food,venue:s.venue};
+  let key=s.key; if(s.real) S.fplan.over[key]=rec; else if(key){ const p=S.fplan.added.find(x=>x.key===key); Object.assign(p,rec,{name:s.name,rsvps:s.rsvps}); } else { key='p'+Date.now().toString(36); S.fplan.added.push({key,name:s.name,rsvps:s.rsvps,...rec}); }
+  saveConfig('fplan',S.fplan); renderAll(); fSimOpen(key); toast('Saved to the plan'); }
+$('#fc-new').addEventListener('click',()=>{ fSimOpen(''); $('#fc-sim-card').scrollIntoView({behavior:'smooth',block:'start'}); });
+$('#fc-copy').addEventListener('click',async()=>{ const head=['Event','Date','Plan for','Room','Food','Supplies & fixed','Contingency','Request']; const rows=fFundRows().map(r=>r.cells); const tot=S.fm.plan.reduce((s,x)=>s+x.B.total,0); const tsv=[head,...rows,['Total','','','','','','',usd(tot)]].map(r=>r.join('\t')).join('\n'); try{ await navigator.clipboard.writeText(tsv); toast('Copied — paste into a sheet'); }catch(e){ toast('Copy blocked by the browser'); } });
+$('#fc-draft').addEventListener('click',()=>draftFor('funding',null));
+$('#fc-assume').addEventListener('click',async()=>{ const c=S.fcfg, M=S.fm.M;
+  const r=await formDialog({title:'Forecast assumptions',submit:'Save',fields:[
+    {key:'food',label:'Food per attendee ($)',type:'number',value:c.food??'',placeholder:M.foodPerHead.toFixed(2),help:`Leave blank to use last year's catering receipts (${usd(M.foodPerHead)} per person).`},
+    {key:'cont',label:'Contingency (%)',type:'number',value:c.cont},
+    ...FTYPES.map(t=>({key:'fx_'+t,label:`Supplies & fixed · ${FTYPE_LABEL[t]} ($)`,type:'number',value:c.fixed[t]})),
+    {key:'rooms',label:'Rooms (name, capacity — one per line)',type:'textarea',value:c.rooms.map(x=>x[0]+', '+x[1]).join('\n'),help:'The demo capacities are placeholders. Use the real numbers from room booking.'}]});
+  if(!r) return; c.food=r.food===''?null:Math.max(0,+r.food||0); c.cont=Math.max(0,+r.cont||0); FTYPES.forEach(t=>c.fixed[t]=Math.max(0,+r['fx_'+t]||0));
+  const rooms=r.rooms.split('\n').map(x=>{ const m=x.match(/^(.*?)[,\t]\s*(\d+)\s*$/); return m&&m[1].trim()?[m[1].trim(),+m[2]]:null; }).filter(Boolean); if(rooms.length) c.rooms=rooms;
+  saveConfig('fcfg',c); renderAll(); toast('Assumptions saved'); });
+
 /* ===================== MEMBER MATCHING ===================== */
 S.enrich={}; S.intros={};
 const STOP=new Set(['about','their','there','with','from','that','this','have','into','also','very','more','than','what','when','where','which','while','would','could','should','really','being','been','were','will','they','them','then','your','ours','love','like','just','some','other','over','year','years','duke','student','students','health','healthcare','interested','interest','interests','looking','business','club','member']);
@@ -741,11 +1010,11 @@ async function saveAction(a){ if(!S.db) return localSave(); try{ await S.db.doc(
 async function saveTeam(p){ if(!S.db) return localSave(); try{ await S.db.doc('team/'+p.id).set(p); }catch(e){ console.warn(e); } }
 async function deleteTeam(p){ if(!S.db) return localSave(); try{ await S.db.doc('team/'+p.id).delete(); }catch(e){ console.warn(e); } }
 async function saveConfig(k,v){ if(!S.db) return localSave(); try{ await S.db.doc('config/'+k).set({value:v}); }catch(e){ console.warn(e); } }
-function localSave(){ try{ localStorage.setItem('cos.local',JSON.stringify({actions:S.actions,team:S.team,rsvpMap:S.rsvpMap,enrich:S.enrich,intros:S.intros})); }catch(e){} }
-function localLoad(){ try{ const j=JSON.parse(localStorage.getItem('cos.local')||'null'); if(j){ S.actions=j.actions||S.actions; S.team=j.team||S.team; S.rsvpMap=j.rsvpMap||{}; S.enrich=j.enrich||{}; S.intros=j.intros||{}; return true; } }catch(e){} return false; }
+function localSave(){ try{ localStorage.setItem('cos.local',JSON.stringify({actions:S.actions,team:S.team,rsvpMap:S.rsvpMap,enrich:S.enrich,intros:S.intros,fplan:S.fplan,fcfg:S.fcfg})); }catch(e){} }
+function localLoad(){ try{ const j=JSON.parse(localStorage.getItem('cos.local')||'null'); if(j){ S.actions=j.actions||S.actions; S.team=j.team||S.team; S.rsvpMap=j.rsvpMap||{}; S.enrich=j.enrich||{}; S.intros=j.intros||{}; if(j.fplan) S.fplan={over:{},added:[],...j.fplan}; if(j.fcfg) S.fcfg={...fDefaults(),...j.fcfg,fixed:{...fDefaults().fixed,...(j.fcfg.fixed||{})}}; return true; } }catch(e){} return false; }
 
 function initDb(){
-  S.actions=DEFAULT_ACTIONS.map(a=>({...a,status:'open'})); S.team=DEFAULT_TEAM.map(p=>({...p,notes:''}));
+  S.actions=DEFAULT_ACTIONS.map(a=>({...a,status:'open'})); S.team=DEFAULT_TEAM.map(p=>({...p,notes:''})); S.fplan={over:{},added:[]}; S.fcfg=fDefaults(); S.fsim=null;
   const had=localLoad(); src('db',had?'ok':'ok',had?'this browser':'defaults');
 }
 
@@ -776,10 +1045,11 @@ PAST EVENTS:\n${past.join('\n')}
 OPEN ACTIONS:\n${acts.join('\n')}
 TEAM:\n${team.join('\n')}
 CALENDAR (±2 weeks):\n${cal.join('\n')}
-RECENT MEETING NEXT STEPS:\n${meet.join('\n')}`;
+RECENT MEETING NEXT STEPS:\n${meet.join('\n')}
+FORECAST (turnout, rooms, funding):\n${S.fm?fContext():'n/a'}`;
 }
 const SYS=`You are the chief of staff to Ella Etchandy, Co-President of Duke Business Behind Health (dBBH), a student org about the health economy. This is a public demo: every member, exec and meeting in the context is fictional sample data, and you can say so if asked. Be direct, specific and short. Use the data provided; cite numbers. When drafting messages, write in dBBH's voice: precise, warm, confident, no filler or hype, no exclamation-mark pileups. Sign as Ella. Never invent facts not in the context; say when something is unknown.`;
-const ASKS=["What should I bring to my 1:1 with Priya?","Draft the exec 'sign up on the portal' nudge","Where is membership weakest and what do we do about it?","Write my Sunday exec update in 6 bullets","Which VP needs a check-in most this week?","What should Info Session 2 accomplish?"];
+const ASKS=["What should I bring to my 1:1 with Priya?","Draft the exec 'sign up on the portal' nudge","Where is membership weakest and what do we do about it?","Write my Sunday exec update in 6 bullets","Which VP needs a check-in most this week?","What should Info Session 2 accomplish?","How much funding should we request for fall events?"];
 function renderAsks(){ const a=$('#asks'); if(a.children.length) return; ASKS.forEach(q=>a.append(el('button',{class:'chip',onclick:()=>{$('#askq').value=q; ask();}},q))); }
 async function ensureSample(){ if(S.sample) return S.sample; S.sample=await window.claude?.use?.('sample').catch(()=>null); $('#asknote').textContent='Scripted answers in this public demo, computed from the data on the page. The real version sends the full context to Claude.'; return S.sample; }
 async function ask(){
@@ -797,7 +1067,8 @@ let lastDraft=null;
 async function draftFor(kind,obj){
   const sample=await ensureSample();
   let title,sub,prompt;
-  if(kind==='prep'){ title='1:1 prep · '+obj.name.split(' ')[0]; sub=obj.role; prompt=`Prepare a 1:1 agenda for Ella's next meeting with ${obj.name} (${obj.role}). Format: 3-5 agenda items, each with the specific question to ask and the data point behind it; then 'Decisions needed' and 'Follow-ups to confirm'. Keep it under 220 words.`; }
+  if(kind==='funding'){ title='Funding request'; sub='From the forecast · check the numbers before sending'; prompt=`Write the funding request dBBH's VP Finance can submit to the student organization funding committee for our upcoming events. Use exactly the numbers below and do not invent costs. Format: a 2–3 sentence overview with the total; a short 'How we sized this' paragraph explaining the forecast in plain words; one line per event; a one-line close signed by Ella. Under 260 words.\n\n${fFundingText()}`; }
+  else if(kind==='prep'){ title='1:1 prep · '+obj.name.split(' ')[0]; sub=obj.role; prompt=`Prepare a 1:1 agenda for Ella's next meeting with ${obj.name} (${obj.role}). Format: 3-5 agenda items, each with the specific question to ask and the data point behind it; then 'Decisions needed' and 'Follow-ups to confirm'. Keep it under 220 words.`; }
   else if(kind==='checkin'){ title='Check-in to '+obj.name.split(' ')[0]; sub='Short message, dBBH voice'; prompt=`Write a short, warm check-in message (text or email, 80-120 words) from Ella to ${obj.name} (${obj.role}) about their current workstream. Reference one concrete thing they own and one specific ask with a date. No hype.`; }
   else if(kind==='action'){ title='Draft · '+obj.title; sub='Message about this action'; prompt=`Write the message Ella should send to move this action forward: "${obj.title}" — ${obj.detail}. Owner: ${obj.owner||'unknown'}. Due ${obj.due||'unspecified'}. 80-140 words, dBBH voice, one clear ask, a date.`; }
   else if(kind==='intro'){ title='Intro · '+obj.a.name.split(' ')[0]+' + '+obj.b.name.split(' ')[0]; sub='Group text or email introducing two members'; prompt=`Write a short intro message (70-110 words) from Ella to two dBBH members so they meet for coffee: ${obj.a.name} (class of ${obj.a.year}, ${obj.a.major}, interests: ${obj.a.interests}; about: ${S.enrich[obj.a.netid]||'n/a'}) and ${obj.b.name} (class of ${obj.b.year}, ${obj.b.major}, interests: ${obj.b.interests}; about: ${S.enrich[obj.b.netid]||'n/a'}). Name the specific overlap (${[...obj.si,...obj.sl,...obj.sk].join(', ')||'shared interests'}) and end with one concrete nudge to pick a time this week. Warm, specific, no filler.`; }
